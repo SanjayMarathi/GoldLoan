@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: gold
+          POSTGRES_PASSWORD: gold
+          POSTGRES_DB: goldloan_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U gold -d goldloan_test"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://gold:gold@localhost:5432/goldloan_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install --no-audit --no-fund
+      - name: Typecheck (shared, api, web)
+        run: npm run typecheck
+      - name: Unit + API tests (incl. real PostgreSQL concurrency tests)
+        run: npm test
+      - name: Agent evals (offline, deterministic)
+        run: npm run eval
+      - name: Build the web app
+        run: npm run build

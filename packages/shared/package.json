@@ -1,0 +1,23 @@
+{
+  "name": "@gold/shared",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Schemas, DTO types and pure helpers shared by the API, the AI agent and the web app",
+  "exports": {
+    ".": "./src/index.ts",
+    "./constants": "./src/constants.ts",
+    "./units": "./src/units.ts",
+    "./format": "./src/format.ts",
+    "./mask": "./src/mask.ts",
+    "./types": "./src/types.ts",
+    "./schemas": "./src/schemas.ts"
+  },
+  "scripts": {
+    "test": "node --import tsx --test \"tests/*.test.ts\"",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  }
+}
