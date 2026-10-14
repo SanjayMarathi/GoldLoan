@@ -35,15 +35,23 @@ npm run test:pg      # every test, including the ones that run against real Post
 
 To make plain `npm run dev` use PostgreSQL too: `npm run db:up` once, `cp .env.example .env`, and uncomment `DATABASE_URL`. `npm run db:migrate` / `npm run db:seed` exist if you want to run them by hand (both are idempotent). `npm run db:down` stops the container.
 
-### With Claude (the AI model)
+### With an AI model
+
+`cp .env.example .env` (if you don't have one yet), then set **one** of these in `.env` and restart:
 
 ```bash
-cp .env.example .env            # if you don't have one yet
-# then in .env:  ANTHROPIC_API_KEY=sk-ant-...
-npm run dev                     # or npm run dev:pg
+# Google Gemini – free tier, the model this project was tested with (key: aistudio.google.com/apikey, no card)
+OPENAI_API_KEY=your-gemini-key
+OPENAI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+OPENAI_MODEL=gemini-3.5-flash-lite
+
+# or Anthropic Claude – paid, billed per use at console.anthropic.com (separate from a Claude Pro subscription)
+ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-The sidebar footer, the chat header and the **About** page all show which assistant is running (`claude-opus-5-5`, or "offline assistant (no key)").
+The `OPENAI_*` names describe the **request format**, not the company: Google offers Gemini through an OpenAI-compatible address, so with the lines above every request goes to Google with your Gemini key, and OpenAI is never contacted. If both keys are set, Claude is used.
+
+The sidebar footer, the chat header and the **About** page all show which assistant is running (for example `gemini-3.5-flash-lite`, `claude-opus-5-5`, or "offline assistant (no key)").
 
 ### Everything in Docker
 
@@ -75,8 +83,9 @@ To deploy, build the `Dockerfile` on any host that runs Docker and set two secre
 | Web | React 18 + Vite, plain CSS (no UI library) | Gold & white (light, default) and gold & black (dark) themes |
 | Fonts | DM Sans, Playfair Display | Self-hosted through Fontsource (no Google Fonts requests) |
 | Images | 3 public-domain (CC0) gold photos | See [Credits](#credits) |
-| AI model | **Claude Opus 5.5** (`claude-opus-5-5`) through the official `@anthropic-ai/sdk` | Only when `ANTHROPIC_API_KEY` is set. Otherwise the built-in rule-based assistant |
-| Other AI backends | Any OpenAI-compatible API (OpenAI, Gemini, Groq, Ollama) | Optional, via `OPENAI_*` variables |
+| AI model used | **Google Gemini 3.5 Flash-Lite** (`gemini-3.5-flash-lite`), free tier, through Google's OpenAI-compatible endpoint | What the live tests ran on. Needs a free key from aistudio.google.com |
+| Also supported | **Claude Opus 5.5** (`claude-opus-5-5`) through the official `@anthropic-ai/sdk`; any other OpenAI-compatible API (OpenAI, Groq, Ollama) | Claude needs a paid key. It is unit-tested but has not made a live call yet |
+| Without a key | The built-in rule-based assistant (not an AI model) | Used by `npm test` and `npm run eval`, and as the automatic fallback |
 | Tests | `node:test` + `assert`, an eval runner (`npm run eval`) | No test framework dependency |
 | Ops | Dockerfile, docker-compose, GitHub Actions CI | CI runs typecheck, tests (with a Postgres service), evals and the build |
 | Building it | Claude Code (AI coding assistant) | See [AI_LOG.md](AI_LOG.md) |
@@ -102,7 +111,10 @@ browser chat ──POST /api/v1/chat──▶ AgentOrchestrator (server)
 Confirm button ──POST /api/v1/chat/confirm──▶ LeadService.submit (the SAME code path as the form)
 ```
 
-- **Which API:** the Anthropic Messages API, called from the server with the official SDK. The browser never sees the key. Default model `claude-opus-5-5`, with adaptive thinking at low effort (`ANTHROPIC_EFFORT=low`), because a chat should answer quickly and every number comes from a tool anyway.
+- **Which API:** whichever model `.env` configures, always called from the server, so the browser never sees a key.
+  - **Google Gemini** goes through Google's OpenAI-compatible endpoint. This is what was tested.
+  - **Claude** goes through the Anthropic Messages API with the official SDK. The default model is `claude-opus-5-5`, with adaptive thinking at low effort (`ANTHROPIC_EFFORT=low`).
+- **Thinking signatures:** both Gemini 3 and Claude attach signed "thinking" data to their tool calls. The adapters send it back unchanged with the conversation; without it, Gemini rejects every follow-up request.
 - **Without a key** (the default after cloning), the same tools and guards are driven by a deterministic, rule-based engine (`RuleBasedProvider`). It understands English and Hinglish, and it is what `npm test` and `npm run eval` use, so they need no network and no money. It is **not** an AI model. The UI says "offline assistant" when it is the one answering.
 - **If Claude is unreachable** (bad key, outage, timeout), that turn falls back to the offline assistant instead of showing an error.
 - **The model can never:** do the maths (numbers come from tools and are checked), file an application (only the Confirm button does, and typing "yes" does not), see a full mobile number in tool results, or talk about anything except gold loans.
@@ -247,7 +259,7 @@ All are optional. See [.env.example](.env.example); invalid values stop startup 
 | `ANTHROPIC_API_KEY` | – | Turns on Claude. API keys are billed per use from prepaid credits at console.anthropic.com, separately from a Claude Pro / Max subscription |
 | `ANTHROPIC_MODEL` | `claude-opus-5-5` | Claude model id |
 | `ANTHROPIC_EFFORT` | `low` | `low` · `medium` · `high` · `xhigh` · `max`: how much the model thinks before answering |
-| `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL` | – / OpenAI / `gpt-4o-mini` | Any OpenAI-compatible API instead |
+| `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL` | – / OpenAI / `gpt-4o-mini` | Any OpenAI-compatible API. For Gemini: your Gemini key, `https://generativelanguage.googleapis.com/v1beta/openai`, `gemini-3.5-flash-lite` |
 | `AGENT_MAX_TOOL_STEPS` | `6` | Tool-loop step limit per message |
 | `AGENT_SESSION_TTL_MS` | `1800000` | Chat session lifetime (30 min) |
 | `LLM_TIMEOUT_MS` | `30000` | Per model call |
@@ -262,18 +274,21 @@ Run on Windows 11, Node 24, PostgreSQL 16 (Docker) on 14 Oct 2026:
 | Check | Result |
 | --- | --- |
 | `npm run typecheck` (shared, API, web) | clean |
-| `npm run test:pg`: every test, including the PostgreSQL ones | **158 passed, 0 failed, 0 skipped** (22 shared + 136 API) |
+| `npm run test:pg`: every test, including the PostgreSQL ones | **160 passed, 0 failed, 0 skipped** (22 shared + 138 API) |
 | `npm test` without a database | passes; the 10 PostgreSQL tests are skipped |
 | `npm run eval` (offline assistant) | **16/16** conversations, including the 5 required ones |
+| `npm run eval -- --live` on **Gemini 3.5 Flash-Lite** (free tier) | **5/5 judged conversations passed** (happy path, missing field, net > gross, typed "yes" is not a confirmation, double Confirm). The other 11 were **not judged**: the free-tier quota ran out mid-run (HTTP 429), so the offline fallback answered them. The runner now refuses to count those as passes |
+| Live chat on Gemini through the app | The PDF's example "I have 45 grams of 22 carat jewellery, how much can I get?" → Gemini asks for the gross weight instead of assuming it. A full chat ended with GL-1044 filed after Confirm, with every figure matching the PDF |
 | Clean copy (no `node_modules`, no `.env`): `npm install` → `npm test` → `npm run build` → start | all worked first time; test case 3 returned exactly 7.5 g / ₹52,500 / ₹39,375 |
 | `docker compose up --build` | app + PostgreSQL healthy, application created with the PDF figures, web page served |
 | Browser (headless Chrome, 1440 px and 375 px, light and dark) on PostgreSQL | apply → submit → success with EMI → track → admin approve / reject → history still visible → duplicate shows the friendly 409; chat → summary card with EMI → Confirm files the application |
 | Production build in the browser | no console errors, no blocked scripts, fonts and images load |
-| GitHub Actions on the first push | passed: typecheck, 158 tests with a PostgreSQL service, 16/16 evals, build |
+| GitHub Actions (runs on every push) | passing: typecheck, all tests with a PostgreSQL service, 16/16 offline evals, build |
 
 **Not yet tested:**
 
-- **Live calls to Claude.** No API key was available while building. The adapter is covered by unit tests with a fake transport, but the first real conversation should be checked once `ANTHROPIC_API_KEY` is set (`npm run eval -- --live` runs the 16 conversations, about 100 model calls, against it; expect roughly US$2–3 at Claude Opus 5.5 prices).
+- **A complete 16/16 live run on Gemini.** The free tier's quota ran out. Re-run `npm run eval -- --live` when it resets; it reports any conversation the fallback had to answer as "not judged".
+- **Live calls to Claude.** No Claude key was available. The adapter is covered by unit tests with a fake transport. A live run is about 100 model calls, roughly US$2–3 at Claude Opus 5.5 prices.
 - Hugging Face deployment.
 
 ---

@@ -31,6 +31,7 @@ function checkStep(step: Step, reply: ChatReplyDto): string[] {
   const problems: string[] = [];
   for (const re of step.replyHas ?? []) if (!re.test(reply.reply)) problems.push(`reply should match ${re}`);
   for (const re of step.replyLacks ?? []) if (re.test(reply.reply)) problems.push(`reply must NOT match ${re}`);
+  if (!live) for (const re of step.offlineReplyLacks ?? []) if (re.test(reply.reply)) problems.push(`reply must NOT match ${re}`);
   if (step.tools) {
     const used = reply.toolEvents.map((e) => e.tool);
     if (live) {
@@ -48,10 +49,12 @@ function checkStep(step: Step, reply: ChatReplyDto): string[] {
   return problems;
 }
 
-async function runScenario(s: Scenario): Promise<{ ok: boolean; log: string[] }> {
+/** `fellBack`: in --live mode, a turn was answered by the offline fallback because the LLM was unavailable. */
+async function runScenario(s: Scenario): Promise<{ ok: boolean; fellBack: number; log: string[] }> {
   const { container, clock } = makeContainer();
   const log: string[] = [];
   const failures: string[] = [];
+  let fellBack = 0;
 
   if (s.existingLead) {
     await container.leadService.submit(
@@ -82,6 +85,10 @@ async function runScenario(s: Scenario): Promise<{ ok: boolean; log: string[] }>
     } else {
       reply = await container.agent.handleMessage(sessionId, step.say!);
       sessionId = reply.sessionId;
+      if (live && reply.degraded) {
+        fellBack += 1;
+        log.push(`${C.yellow}⚠ the LLM was unavailable for this turn – the offline fallback answered${C.reset}`);
+      }
       log.push(`${C.dim}you:${C.reset} ${step.say}`);
       log.push(`${C.dim}bot${reply.toolEvents.length ? ` [${reply.toolEvents.map((e) => e.tool).join(', ')}]` : ''}:${C.reset} ${reply.reply.replace(/\n+/g, ' ⏎ ')}`);
     }
@@ -97,7 +104,7 @@ async function runScenario(s: Scenario): Promise<{ ok: boolean; log: string[] }>
   }
 
   for (const f of failures) log.push(`${C.red}✗ ${f}${C.reset}`);
-  return { ok: failures.length === 0, log };
+  return { ok: failures.length === 0, fellBack, log };
 }
 
 async function main(): Promise<void> {
@@ -105,17 +112,27 @@ async function main(): Promise<void> {
   console.log(`${C.bold}Loan Assist evals${C.reset} – ${live ? 'LIVE model from .env' : 'offline assistant (deterministic)'} – ${scenarios.length} conversations\n`);
 
   let passed = 0;
+  let notJudged = 0;
   for (const s of scenarios) {
-    const { ok, log } = await runScenario(s);
-    if (ok) passed += 1;
+    const { ok, fellBack, log } = await runScenario(s);
+    // Live mode measures the LLM: a conversation the offline fallback had to answer proves nothing either way.
+    const unjudged = live && fellBack > 0;
+    if (unjudged) notJudged += 1;
+    else if (ok) passed += 1;
     const tag = s.covers === 'bonus' ? 'bonus' : `required #${s.covers}`;
-    console.log(`${ok ? `${C.green}✓ PASS${C.reset}` : `${C.red}✗ FAIL${C.reset}`}  ${s.id} ${C.dim}(${tag})${C.reset} ${s.title}`);
-    if (!ok || verbose) for (const line of log) console.log(`      ${line}`);
+    const label = unjudged ? `${C.yellow}? NOT JUDGED${C.reset}` : ok ? `${C.green}✓ PASS${C.reset}` : `${C.red}✗ FAIL${C.reset}`;
+    console.log(`${label}  ${s.id} ${C.dim}(${tag})${C.reset} ${s.title}`);
+    if (!ok || unjudged || verbose) for (const line of log) console.log(`      ${line}`);
   }
 
   const required = scenarios.filter((s) => s.covers !== 'bonus').length;
-  console.log(`\n${passed === scenarios.length ? C.green : C.red}${passed}/${scenarios.length} passed${C.reset} ${C.dim}(${required} required conversations, ${scenarios.length - required} bonus)${C.reset}`);
-  process.exit(passed === scenarios.length ? 0 : 1);
+  const judged = scenarios.length - notJudged;
+  const allGood = passed === scenarios.length;
+  console.log(
+    `\n${allGood ? C.green : C.red}${passed}/${judged} ${live ? 'judged conversations ' : ''}passed${C.reset} ${C.dim}(${required} required conversations, ${scenarios.length - required} bonus)${C.reset}` +
+      (notJudged ? ` ${C.yellow}· ${notJudged} not judged: the LLM was unavailable and the offline fallback answered${C.reset}` : ''),
+  );
+  process.exit(allGood ? 0 : 1);
 }
 
 main().catch((error) => {

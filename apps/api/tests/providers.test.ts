@@ -175,7 +175,46 @@ describe('OpenAI-compatible adapter', () => {
     assert.throws(() => parseOpenAiResponse({}), LlmUnavailableError);
   });
 
-  it('works without an API key (local Ollama) and honours tool_choice none', async () => {
+  // Regression: Gemini 3 rejected every follow-up request with HTTP 400 ("Function call is missing a
+  // thought_signature") because the history was rebuilt without the signature it attached to its tool call.
+  it("replays Gemini's thought_signature on its own tool calls, and never sends it to another model", () => {
+    const raw = {
+      role: 'assistant',
+      content: null,
+      refusal: null,
+      tool_calls: [
+        {
+          id: 'fc-1',
+          type: 'function',
+          function: { name: 'calculate_quote', arguments: '{"netWeightGrams":45}' },
+          extra_content: { google: { thought_signature: 'sig-xyz' } },
+        },
+      ],
+    };
+    const parsed = parseOpenAiResponse({ choices: [{ message: raw, finish_reason: 'tool_calls' }] }, 'openai-compat:gemini-x');
+    const messages: ChatMessage[] = [
+      { role: 'user', content: '45 g net' },
+      { role: 'assistant', content: '', toolCalls: parsed.toolCalls, ...(parsed.providerContent ? { providerContent: parsed.providerContent } : {}) },
+      { role: 'tool', content: '{"ok":true}', toolCallId: 'fc-1' },
+    ];
+    const replayed = toOpenAiMessages('S', messages, 'openai-compat:gemini-x')[2]!;
+    assert.deepEqual(replayed.tool_calls![0]!.extra_content, { google: { thought_signature: 'sig-xyz' } });
+    assert.equal(replayed.tool_calls![0]!.id, 'fc-1');
+    assert.equal('refusal' in replayed, false, 'response-only fields are not sent back');
+    const otherModel = toOpenAiMessages('S', messages, 'openai-compat:gpt-4o-mini')[2]!;
+    assert.equal(otherModel.tool_calls![0]!.extra_content, undefined);
+  });
+
+  it('never runs a tool call cut off by the token limit', () => {
+    const r = parseOpenAiResponse(
+      { choices: [{ message: { content: 'Let me', tool_calls: [{ id: 'a', function: { name: 'calculate_quote', arguments: '{"net' } }] }, finish_reason: 'length' }] },
+      'openai-compat:m',
+    );
+    assert.equal(r.toolCalls.length, 0);
+    assert.equal(r.providerContent, undefined);
+  });
+
+  it('sends no temperature, leaves room for thinking, works without a key (local Ollama) and honours tool_choice none', async () => {
     let body: Record<string, unknown> = {};
     let headers: Record<string, string> = {};
     const fetchImpl: FetchLike = async (_url, init) => {
@@ -184,8 +223,15 @@ describe('OpenAI-compatible adapter', () => {
       return json({ choices: [{ message: { content: 'ok' } }] });
     };
     const p = new OpenAICompatProvider({ apiKey: undefined, baseUrl: 'http://localhost:11434/v1', model: 'llama3.1', timeoutMs: 1000, fetchImpl });
-    await p.complete({ system: 's', messages: [{ role: 'user', content: 'hi' }], tools: [], toolChoice: 'none' });
+    await p.complete({
+      system: 's',
+      messages: [{ role: 'user', content: 'hi' }],
+      tools: [{ name: 't', description: 'd', parameters: { type: 'object' } }],
+      toolChoice: 'none',
+    });
     assert.equal(body.tool_choice, 'none');
+    assert.equal(body.temperature, undefined);
+    assert.ok(Number(body.max_tokens) >= 4000, 'max_tokens must leave room for thinking');
     assert.equal(headers.authorization, undefined);
   });
 });

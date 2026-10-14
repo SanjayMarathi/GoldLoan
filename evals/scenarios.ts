@@ -15,6 +15,8 @@ export interface Step {
   press?: 'confirm' | 'cancel' | 'confirm-twice';
   replyHas?: RegExp[];
   replyLacks?: RegExp[];
+  /** Checked only for the offline engine: regressions of its own parser that say nothing about an LLM */
+  offlineReplyLacks?: RegExp[];
   tools?: string[];
   card?: boolean;
   submitted?: boolean;
@@ -57,7 +59,9 @@ export const SCENARIOS: Scenario[] = [
     covers: 2,
     steps: [
       { say: 'I want a loan against my gold', tools: [], replyHas: [/net weight/i], replyLacks: [NO_MONEY] },
-      { say: '22 karat', tools: [], replyHas: [/net weight/i], replyLacks: [NO_MONEY, /gross weight/i] }, // regression: "22 karat" was once read as a 22 g net weight
+      // regression of the offline parser: "22 karat" was once read as a 22 g net weight, so the next question skipped to the
+      // gross weight. An LLM asking for both weights at once (as its prompt says) is correct, hence offline-only.
+      { say: '22 karat', tools: [], replyHas: [/net weight/i], replyLacks: [NO_MONEY], offlineReplyLacks: [/gross weight/i] },
       { say: 'gross is 20 grams', tools: [], replyHas: [/net weight/i], replyLacks: [NO_MONEY] },
     ],
     leadsAtEnd: 0,
@@ -68,7 +72,7 @@ export const SCENARIOS: Scenario[] = [
     covers: 3,
     steps: [
       { say: '22 karat gold' },
-      { say: 'net 52 grams gross 50 grams', replyHas: [/net weight cannot be more than gross/i], replyLacks: [NO_MONEY], card: false },
+      { say: 'net 52 grams gross 50 grams', replyHas: [/net weight (cannot|can't|can not|must not) be (more|greater|higher) than (the )?gross/i], replyLacks: [NO_MONEY], card: false },
       { say: 'oops, net is 45 and gross is 50', tools: ['calculate_quote'], replyHas: [/₹2,16,562/] },
     ],
     leadsAtEnd: 0,
@@ -80,7 +84,7 @@ export const SCENARIOS: Scenario[] = [
     existingLead: true,
     steps: [
       { say: 'net 45 gross 50 22 karat', tools: ['calculate_quote'] },
-      { say: 'EMI plan. Ravi Kumar, 9876543210', tools: ['check_existing_application'], replyHas: [/GL-1001/, /already has an application/i], card: false, submitted: false },
+      { say: 'EMI plan. Ravi Kumar, 9876543210', tools: ['check_existing_application'], replyHas: [/GL-1001/, /already (has|have) an application/i], card: false, submitted: false },
     ],
     leadsAtEnd: 1,
   },

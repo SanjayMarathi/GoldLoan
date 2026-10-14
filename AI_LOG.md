@@ -10,7 +10,7 @@
 | Claude Code, session 2 (Claude Opus 5.5) | Theme redesign (gold & white / gold & black with gold photography), checking the project against the PDF, switching on and testing PostgreSQL, rewriting the Claude adapter on the official SDK, the scrollable application page, the Track page, the admin details drawer, EMI on every summary, and the README / AI_LOG rewrite. It ran every test, the Docker build and headless-browser checks itself |
 | Headless Chrome via `puppeteer-core` (driven by Claude Code) | Checking the real UI against the running app: 375 px and 1440 px, light and dark, the full apply → track → admin → approve flow on PostgreSQL, the chat → Confirm flow, the production build |
 | Openverse API | Finding public-domain (CC0) gold photos for the background |
-| The product at run time | Claude Opus 5.5 through the Anthropic API when `ANTHROPIC_API_KEY` is set; otherwise the deterministic offline engine, so the project runs and is tested without a key |
+| The product at run time | **Google Gemini 3.5 Flash-Lite** (free tier, via Google's OpenAI-compatible endpoint) is the model it was tested with. Claude Opus 5.5 is supported through the official Anthropic SDK but has not made a live call (no paid key). With no key, the deterministic offline engine runs, so the project works and is tested without any key |
 
 `TODO (you)`: add anything else you used (ChatGPT, Copilot, Gemini, search, docs…), and roughly how many hours you spent reading, running and changing the code yourself.
 
@@ -74,6 +74,20 @@ Because the agent falls back to the offline assistant whenever the model call fa
 
 **Still open, honestly:** the adapter has not yet talked to the real API. Once a key is in `.env`, run `npm run eval -- --live` and write the result here.
 
+### The Gemini adapter failed the same way, and the live results were over-reported
+
+**What happened.** When a free Gemini key was added in session 2, every chat turn was still answered by the offline engine. The AI-written OpenAI-compatible adapter rebuilt the conversation history without the `thought_signature` that Gemini 3 attaches to each tool call. Gemini answered every follow-up request with HTTP 400 ("Function call is missing a thought_signature"), and the agent quietly fell back to the offline engine. The adapter also had the same `temperature: 0.2` / `max_tokens: 700` flaw as the Claude one.
+
+**How it was spotted.** Each reply carried `degraded: true` and the server log showed the 400.
+
+**The fix.** The adapter now replays Gemini's tool calls exactly as returned, signature included. It sends no `temperature`, and `max_tokens` leaves room for thinking.
+
+**Tests that catch it now.** `providers.test.ts` → *"replays Gemini's thought_signature on its own tool calls, and never sends it to another model"* and *"sends no temperature, leaves room for thinking…"*.
+
+**Then the AI over-reported the live results.** It reported 13/16 and then 15/16 conversations passing "on Gemini". Some of those answers had in fact come from the offline fallback, because Gemini was overloaded (503) and later out of free quota (429), and the eval runner counted fallback answers as passes. It was noticed when a "passing" reply was word-for-word the offline engine's template.
+
+The runner now marks any conversation where the fallback answered as **NOT JUDGED**, never as a pass. The honest result is in the README: 5/5 judged conversations passed, and 11 were not judged because of the quota. There is no automated test for the runner itself.
+
 ### Earlier: "22 karat" read as 22 grams (session 1)
 
 The first version of the offline assistant's parser (`apps/api/src/agent/nlu.ts`) read **"22 karat" as a net weight of 22 grams**. The bot asked "What is the net weight?", the user answered "22 karat", and the bare-number fallback stored 22 g. It was found while exercising the "missing field" conversation, because the next question skipped ahead to the gross weight. Karat expressions are now removed before the bare-number fallback runs. The guards are `apps/api/tests/agent.test.ts` → *"Scenario 2 – missing field"* and `evals/scenarios.ts` → `missing-field`, step 2.
@@ -84,6 +98,9 @@ The first version of the offline assistant's parser (`apps/api/src/agent/nlu.ts`
 
 | Session | Mistake | How it was caught | Fix and guard |
 | --- | --- | --- | --- |
+| 2 | On live Gemini the system prompt was too soft. Given "45 grams of 22 carat jewellery", the model assumed gross = net instead of asking. It also left pure gold / gold value out of quotes, and answered "22 karat gold" in Hinglish | Live testing with the Gemini key | The three rules are now explicit in `prompt.ts`. Re-checked on live Gemini: it now asks for the gross weight, opens quotes with "41.25 g of pure gold, worth ₹2,88,750", and replies in English |
+| 2 | Two eval checks were stricter than the rule they test. One demanded the exact words "more than gross", and Gemini wrote "more than **the** gross". The other forbade "gross weight" after "22 karat", although the prompt tells the model to ask for both weights; that check guards an offline-parser bug | Reading the failing live transcripts | The wording check accepts natural phrasing. The parser check now applies to the offline engine only (`offlineReplyLacks`), so it still guards that bug. These were changed to accept correct behaviour, not to hide failures |
+| 2 | Told the user that a live Claude eval run costs "a few cents". It is roughly US$2–3 (about 100 calls at Claude Opus 5.5 prices) | Re-estimating from the prompt and tool sizes | README corrected |
 | 2 | In the admin table, if the history panel was open when a status changed, it stayed on "Loading history…" forever. The cache was cleared but nothing re-fetched it | **Reported by the user**: "once application approved we cant take look at that history" | Replaced by a details drawer that reloads after every action. `http.test.ts` → *"GET /leads/:id → the full application after approval … the whole history"* covers the API; the UI was checked in a browser (no automated UI test) |
 | 2 | The new admin drawer appeared trapped inside the table card instead of over the page (`position: fixed` inside an element with a transform animation) | Screenshot review | Rendered through a React portal. No automated test |
 | 2 | The README said the lockfile was missing and the HTTP tests and build had never run, even after they had | Re-reading the README against what had actually been run | Corrected; the README now lists what was run, when, and the results |
@@ -108,10 +125,11 @@ In session 1 the AI worked without network access, so much of the code had never
 | `vite build` | ✅ |
 | `Dockerfile` and `docker compose up --build` | ✅ app + database healthy, application created |
 | Clean-clone check: `npm install` → `npm test` → `npm run build` → start | ✅ |
-| The Claude adapter against the **live** API | ❌ not yet: no key. Unit tests with a fake transport only |
-| GitHub Actions workflow | ✅ passed on the first push (158 tests incl. PostgreSQL, 16/16 evals, build) |
+| The Gemini adapter against the **live** API | ⚠️ works end to end in the app; `npm run eval -- --live`: 5/5 judged conversations passed, 11 not judged (free-tier quota ran out) |
+| The Claude adapter against the **live** API | ❌ not yet: no paid key. Unit tests with a fake transport only |
+| GitHub Actions workflow | ✅ passes on every push (all tests incl. PostgreSQL, 16/16 offline evals, build) |
 
-`TODO (you)`: after adding your key, run `npm run eval -- --live` and write one line here on how the 16 conversations went against Claude.
+`TODO (you)`: when the Gemini free quota has reset, run `npm run eval -- --live` again and write one line here with the result (and do the same with Claude if you add a paid key).
 
 ## 5. How the work was divided
 
