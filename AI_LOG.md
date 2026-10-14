@@ -109,7 +109,7 @@ In session 1 the AI worked without network access, so much of the code had never
 | `Dockerfile` and `docker compose up --build` | ✅ app + database healthy, application created |
 | Clean-clone check: `npm install` → `npm test` → `npm run build` → start | ✅ |
 | The Claude adapter against the **live** API | ❌ not yet: no key. Unit tests with a fake transport only |
-| GitHub Actions workflow | ❌ runs on the first push |
+| GitHub Actions workflow | ✅ passed on the first push (158 tests incl. PostgreSQL, 16/16 evals, build) |
 
 `TODO (you)`: after adding your key, run `npm run eval -- --live` and write one line here on how the 16 conversations went against Claude.
 

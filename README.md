@@ -269,11 +269,11 @@ Run on Windows 11, Node 24, PostgreSQL 16 (Docker) on 14 Oct 2026:
 | `docker compose up --build` | app + PostgreSQL healthy, application created with the PDF figures, web page served |
 | Browser (headless Chrome, 1440 px and 375 px, light and dark) on PostgreSQL | apply → submit → success with EMI → track → admin approve / reject → history still visible → duplicate shows the friendly 409; chat → summary card with EMI → Confirm files the application |
 | Production build in the browser | no console errors, no blocked scripts, fonts and images load |
+| GitHub Actions on the first push | passed: typecheck, 158 tests with a PostgreSQL service, 16/16 evals, build |
 
 **Not yet tested:**
 
 - **Live calls to Claude.** No API key was available while building. The adapter is covered by unit tests with a fake transport, but the first real conversation should be checked once `ANTHROPIC_API_KEY` is set (`npm run eval -- --live` runs the 16 conversations against it and costs a few cents).
-- **The GitHub Actions run.** It runs on the first push.
 - Hugging Face deployment.
 
 ---
