@@ -244,7 +244,7 @@ All are optional. See [.env.example](.env.example); invalid values stop startup 
 | `GOLD_RATE_CACHE_TTL_MS` | `60000` | Rate cache lifetime |
 | `RATE_LIMIT_WINDOW_MS` / `_LEADS_MAX` / `_CHAT_MAX` | `60000` / `20` / `40` | Per-IP limits (`_LEADS_MAX` also limits applicant lookups) |
 | `LLM_PROVIDER` | `auto` | `anthropic` · `openai` · `offline`. `auto` picks by which key is set |
-| `ANTHROPIC_API_KEY` | – | Turns on Claude |
+| `ANTHROPIC_API_KEY` | – | Turns on Claude. API keys are billed per use from prepaid credits at console.anthropic.com, separately from a Claude Pro / Max subscription |
 | `ANTHROPIC_MODEL` | `claude-opus-5-5` | Claude model id |
 | `ANTHROPIC_EFFORT` | `low` | `low` · `medium` · `high` · `xhigh` · `max`: how much the model thinks before answering |
 | `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL` | – / OpenAI / `gpt-4o-mini` | Any OpenAI-compatible API instead |
@@ -273,7 +273,7 @@ Run on Windows 11, Node 24, PostgreSQL 16 (Docker) on 14 Oct 2026:
 
 **Not yet tested:**
 
-- **Live calls to Claude.** No API key was available while building. The adapter is covered by unit tests with a fake transport, but the first real conversation should be checked once `ANTHROPIC_API_KEY` is set (`npm run eval -- --live` runs the 16 conversations against it and costs a few cents).
+- **Live calls to Claude.** No API key was available while building. The adapter is covered by unit tests with a fake transport, but the first real conversation should be checked once `ANTHROPIC_API_KEY` is set (`npm run eval -- --live` runs the 16 conversations, about 100 model calls, against it; expect roughly US$2–3 at Claude Opus 5.5 prices).
 - Hugging Face deployment.
 
 ---
