@@ -53,6 +53,16 @@ docker compose up --build       # app + PostgreSQL on http://localhost:4000
 
 The API serves the built React app, so this is one app container plus the database.
 
+### Deploying, and where the data lives
+
+| How it runs | Where applications are stored | After a restart or redeploy |
+| --- | --- | --- |
+| `npm run dev` with no `DATABASE_URL` | In memory | **Gone.** Fine for a demo, never for real use |
+| `npm run dev:pg` or `docker compose up` on your machine | PostgreSQL in Docker, on the named volume `pgdata` | **Kept.** It survives restarts, rebuilds and `docker compose down`. Only `docker compose down -v` deletes the volume |
+| A hosting service (Render, Railway, Fly.io, a VM…) | A managed PostgreSQL (Neon, Supabase, Render Postgres, RDS…) set as `DATABASE_URL` | **Kept.** The database lives outside the app container |
+
+To deploy, build the `Dockerfile` on any host that runs Docker and set two secrets in the host's settings (never in the repo): `DATABASE_URL` (from the managed PostgreSQL, usually ending in `?sslmode=require`) and `ANTHROPIC_API_KEY`. On every start the app applies any new migrations and re-runs the seed. Both only add or update; neither ever deletes data, so redeploying keeps every application. Not yet tried against a managed PostgreSQL provider; tested with PostgreSQL 16 in Docker.
+
 ---
 
 ## What was used

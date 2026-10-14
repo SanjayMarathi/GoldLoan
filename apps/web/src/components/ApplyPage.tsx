@@ -125,7 +125,7 @@ export function ApplyPage({ onFiled, onTrack, onRestart }: ApplyPageProps) {
 
   if (done) {
     return (
-      <section className="card">
+      <section className="card apply apply-done">
         <Stepper step={4} />
         <SuccessScreen response={done} onNew={onRestart} onTrack={() => onTrack(done.applicationId)} />
       </section>

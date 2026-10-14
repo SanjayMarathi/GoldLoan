@@ -77,7 +77,7 @@ export default function App() {
   );
 
   return (
-    <div className="app">
+    <div className={`app route-${route}`}>
       <div className="bg" aria-hidden="true" />
       <a className="skip-link" href="#main">
         Skip to content

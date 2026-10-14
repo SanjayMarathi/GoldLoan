@@ -2314,3 +2314,95 @@ body.no-scroll {
     justify-content: center;
   }
 }
+
+/* ── apply page: full width, transparent – the gold background shows through ── */
+.card.apply {
+  max-width: none;
+  padding: 0 4px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+/* with no card, the bottom photo sits behind the form text: keep it a faint texture there */
+.route-apply .bg::before {
+  opacity: 0.2;
+}
+:root[data-theme='dark'] .route-apply .bg::before {
+  opacity: 0.22;
+}
+.card.apply .apply-progress {
+  margin: 14px 0 0;
+  padding: 12px 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.card.apply .card-head {
+  margin: 26px 0 8px;
+}
+.card.apply h1 {
+  font-size: 36px;
+}
+.card.apply .apply-section {
+  padding: 28px 0 32px;
+}
+.card.apply-done {
+  padding-top: 14px;
+}
+.card.apply-done > .stepper {
+  padding: 12px 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.grid-3 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.3fr);
+  gap: 14px;
+}
+/* wide screens: use the width instead of stretching everything */
+@media (min-width: 901px) {
+  .card.apply .form > .btn-block {
+    align-self: flex-end;
+    width: auto;
+    min-width: 260px;
+  }
+  .card.apply .summary:not(.compact) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 40px;
+  }
+  .card.apply .summary:not(.compact) .summary-row.total {
+    grid-column: 1 / -1;
+  }
+  .card.apply .details .summary {
+    display: block;
+  }
+}
+@media (max-width: 760px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .grid-3 {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .grid-3 > :last-child {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 600px) {
+  .card.apply {
+    padding: 0;
+  }
+  .card.apply .apply-progress {
+    margin: 8px 0 0;
+    padding: 10px 12px;
+  }
+  .card.apply h1 {
+    font-size: 27px;
+  }
+}

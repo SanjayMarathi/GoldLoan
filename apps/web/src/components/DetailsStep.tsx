@@ -26,46 +26,48 @@ export function DetailsStep({ values, errors, touched, quote, onChange, onTouch,
 
   return (
     <form onSubmit={submit} noValidate className="form" aria-label="Your details">
-      <Field id="name" label="Full name" error={err('name')} hint="As on your ID – letters and spaces only">
-        <input
-          id="name"
-          name="name"
-          type="text"
-          autoComplete="name"
-          autoCapitalize="words"
-          enterKeyHint="next"
-          maxLength={60}
-          value={values.name}
-          onChange={(e) => onChange({ name: e.target.value.replace(/[^\p{L}\p{M} ]/gu, '') })}
-          onBlur={() => onTouch('name')}
-          aria-invalid={Boolean(err('name'))}
-          aria-describedby="name-msg"
-          placeholder="e.g. Ravi Kumar"
-        />
-      </Field>
-
-      <Field id="mobile" label="Mobile number" error={err('mobileNumber')} hint="10 digits, starting with 6, 7, 8 or 9">
-        <div className="input-prefix">
-          <span aria-hidden="true">+91</span>
-          <input
-            id="mobile"
-            name="mobile"
-            type="tel"
-            inputMode="numeric"
-            autoComplete="tel-national"
-            enterKeyHint="next"
-            maxLength={10}
-            value={values.mobile}
-            onChange={(e) => onChange({ mobile: digitsOnly(e.target.value, 10) })}
-            onBlur={() => onTouch('mobileNumber')}
-            aria-invalid={Boolean(err('mobileNumber'))}
-            aria-describedby="mobile-msg"
-            placeholder="98765 43210"
-          />
-        </div>
-      </Field>
-
       <div className="grid-2">
+        <Field id="name" label="Full name" error={err('name')} hint="As on your ID – letters and spaces only">
+          <input
+            id="name"
+            name="name"
+            type="text"
+            autoComplete="name"
+            autoCapitalize="words"
+            enterKeyHint="next"
+            maxLength={60}
+            value={values.name}
+            onChange={(e) => onChange({ name: e.target.value.replace(/[^\p{L}\p{M} ]/gu, '') })}
+            onBlur={() => onTouch('name')}
+            aria-invalid={Boolean(err('name'))}
+            aria-describedby="name-msg"
+            placeholder="e.g. Ravi Kumar"
+          />
+        </Field>
+
+        <Field id="mobile" label="Mobile number" error={err('mobileNumber')} hint="10 digits, starting with 6, 7, 8 or 9">
+          <div className="input-prefix">
+            <span aria-hidden="true">+91</span>
+            <input
+              id="mobile"
+              name="mobile"
+              type="tel"
+              inputMode="numeric"
+              autoComplete="tel-national"
+              enterKeyHint="next"
+              maxLength={10}
+              value={values.mobile}
+              onChange={(e) => onChange({ mobile: digitsOnly(e.target.value, 10) })}
+              onBlur={() => onTouch('mobileNumber')}
+              aria-invalid={Boolean(err('mobileNumber'))}
+              aria-describedby="mobile-msg"
+              placeholder="98765 43210"
+            />
+          </div>
+        </Field>
+      </div>
+
+      <div className="grid-3">
         <Field id="gross" label="Gross weight (g)" error={err('grossWeightGrams')} hint="With stones, if any">
           <input
             id="gross"
@@ -98,27 +100,26 @@ export function DetailsStep({ values, errors, touched, quote, onChange, onTouch,
             placeholder="45"
           />
         </Field>
-      </div>
-
-      <div className="field">
-        <span className="label" id="karat-label">
-          Purity (karat)
-        </span>
-        <div className="segmented" role="radiogroup" aria-labelledby="karat-label">
-          {KARATS.map((k) => (
-            <button
-              key={k}
-              type="button"
-              role="radio"
-              aria-checked={values.karat === k}
-              className={values.karat === k ? 'on' : ''}
-              onClick={() => onChange({ karat: k })}
-            >
-              {k}K
-            </button>
-          ))}
+        <div className="field">
+          <span className="label" id="karat-label">
+            Purity (karat)
+          </span>
+          <div className="segmented" role="radiogroup" aria-labelledby="karat-label">
+            {KARATS.map((k) => (
+              <button
+                key={k}
+                type="button"
+                role="radio"
+                aria-checked={values.karat === k}
+                className={values.karat === k ? 'on' : ''}
+                onClick={() => onChange({ karat: k })}
+              >
+                {k}K
+              </button>
+            ))}
+          </div>
+          <p className="field-msg">{values.karat === 24 ? 'Pure gold' : values.karat === 22 ? 'Most jewellery' : 'Mixed with other metals'}</p>
         </div>
-        <p className="field-msg">{values.karat === 24 ? 'Pure gold' : values.karat === 22 ? 'Most jewellery' : 'Mixed with other metals'}</p>
       </div>
 
       <LivePreview quote={quote} />
