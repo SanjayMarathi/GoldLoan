@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { FormEvent } from 'react';
+import type { CSSProperties, FormEvent, PointerEvent as ReactPointerEvent } from 'react';
 import { formatGrams, formatGramsFromMg, formatPaise, formatRupees } from '@gold/shared/format';
 import type { ApplicationSummaryDto, ChatReplyDto, ChatToolEvent } from '@gold/shared/types';
 import { ApiError, api } from '../api/client.ts';
@@ -33,11 +33,25 @@ const WELCOME: UiMessage = {
 };
 const SUGGESTIONS = ['What loan plans do you have?', 'I have 45 g net, 50 g gross, 22 karat gold', 'Mujhe 10 gram 18 karat par loan chahiye'];
 
+/* The panel can be resized on desktop (drag the top-left corner) or enlarged with a button. Phones: full screen. */
+const SIZE_KEY = 'gl-chat-size';
+const MIN_W = 340;
+const MIN_H = 420;
+interface Size {
+  w: number;
+  h: number;
+}
+
+function clampSize(s: Size): Size {
+  const maxW = Math.max(MIN_W, window.innerWidth - 44);
+  const maxH = Math.max(MIN_H, window.innerHeight - 44);
+  return { w: Math.round(Math.min(Math.max(s.w, MIN_W), maxW)), h: Math.round(Math.min(Math.max(s.h, MIN_H), maxH)) };
+}
+
 function assistantLabel(provider: string, degraded: boolean): string {
   if (degraded) return 'Offline assistant (AI is busy)';
   if (provider.startsWith('offline')) return 'Offline assistant';
-  if (provider.startsWith('anthropic:')) return `Claude · ${provider.slice('anthropic:'.length)}`;
-  return provider.split(':')[1] ?? 'AI assistant';
+  return 'AI assistant';
 }
 
 interface ChatPanelProps {
@@ -60,6 +74,35 @@ export function ChatPanel({ open, onClose, onFiled }: ChatPanelProps) {
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLElement>(null);
+  const [size, setSize] = useState<Size>(() => clampSize(readJson<Size>(SIZE_KEY, { w: 400, h: 680 })));
+  const [maximized, setMaximized] = useState(false);
+  const sizeRef = useRef(size);
+  sizeRef.current = size;
+
+  // keep the panel on screen when the window shrinks
+  useEffect(() => {
+    const onResize = (): void => setSize((s) => clampSize(s));
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  const startResize = (e: ReactPointerEvent<HTMLDivElement>): void => {
+    e.preventDefault();
+    const handle = e.currentTarget;
+    handle.setPointerCapture(e.pointerId);
+    const start = { x: e.clientX, y: e.clientY, ...sizeRef.current };
+    setMaximized(false);
+    const move = (ev: PointerEvent): void => setSize(clampSize({ w: start.w + (start.x - ev.clientX), h: start.h + (start.y - ev.clientY) }));
+    const stop = (): void => {
+      handle.removeEventListener('pointermove', move);
+      handle.removeEventListener('pointerup', stop);
+      handle.removeEventListener('pointercancel', stop);
+      writeJson(SIZE_KEY, sizeRef.current);
+    };
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', stop);
+    handle.addEventListener('pointercancel', stop);
+  };
 
   // A closed panel must not be reachable by keyboard or screen reader (set imperatively: works on React 18 and 19).
   useEffect(() => {
@@ -182,7 +225,14 @@ export function ChatPanel({ open, onClose, onFiled }: ChatPanelProps) {
   };
 
   return (
-    <aside ref={panelRef} className={`chat${open ? ' open' : ''}`} aria-label="Loan Assist chat" aria-hidden={!open}>
+    <aside
+      ref={panelRef}
+      className={`chat${open ? ' open' : ''}${maximized ? ' maximized' : ''}`}
+      style={{ '--chat-w': `${size.w}px`, '--chat-h': `${size.h}px` } as CSSProperties}
+      aria-label="Loan Assist chat"
+      aria-hidden={!open}
+    >
+      <div className="chat-resize" onPointerDown={startResize} title="Drag to resize" aria-hidden="true" />
       <header className="chat-head">
         <span className="avatar" aria-hidden="true">
           <Icon name="sparkle" size={18} />
@@ -191,6 +241,15 @@ export function ChatPanel({ open, onClose, onFiled }: ChatPanelProps) {
           <b>Loan Assist</b>
           <small>{assistant ?? 'Gold loan helper'}</small>
         </div>
+        <button
+          type="button"
+          className="icon-btn chat-size-btn"
+          onClick={() => setMaximized((m) => !m)}
+          aria-label={maximized ? 'Restore the chat size' : 'Enlarge the chat'}
+          title={maximized ? 'Restore size' : 'Enlarge'}
+        >
+          <Icon name={maximized ? 'shrink' : 'expand'} size={17} />
+        </button>
         <button type="button" className="icon-btn" onClick={reset} aria-label="Start a new chat" title="New chat">
           <Icon name="refresh" size={18} />
         </button>

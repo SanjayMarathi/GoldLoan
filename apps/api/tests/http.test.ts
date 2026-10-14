@@ -191,6 +191,15 @@ describe('REST API', () => {
     assert.deepEqual(bad.json.error.fields.map((f: any) => f.field).sort(), ['applicationId', 'mobileNumber']);
   });
 
+  it('GET /leads/summary → count and loan total per status (route is not mistaken for an application id)', async () => {
+    const r = await call(h, 'GET', '/leads/summary');
+    assert.equal(r.status, 200);
+    const counted = Object.values(r.json.byStatus as Record<string, { count: number }>).reduce((n, s) => n + s.count, 0);
+    assert.equal(counted, r.json.total);
+    assert.ok(r.json.total >= 1);
+    assert.ok(r.json.byStatus.APPROVED.count >= 1, 'an application was approved earlier in this suite');
+  });
+
   it('errors are always JSON with the same shape – malformed JSON, unknown routes', async () => {
     const bad = await call(h, 'POST', '/leads', '{not json');
     assert.equal(bad.status, 400);

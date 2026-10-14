@@ -1,6 +1,6 @@
 /**
  * Any OpenAI-compatible Chat Completions endpoint: OpenAI, Google Gemini (OpenAI-compat URL),
- * Ollama / LM Studio / vLLM (local, free) … selected purely by OPENAI_BASE_URL + OPENAI_MODEL.
+ * Ollama / LM Studio / vLLM (local, free) … selected purely by LLM_BASE_URL + LLM_MODEL.
  *
  *  • No `temperature`: each provider's default is what its models are tuned for (Gemini 3 recommends its default).
  *  • `max_tokens` leaves room for thinking, which reasoning models (Gemini 3, o-series) count towards it.

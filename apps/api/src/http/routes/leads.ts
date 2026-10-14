@@ -56,6 +56,14 @@ export function leadsRouter(c: Container): Router {
     }),
   );
 
+  // Admin panel totals per status.
+  router.get(
+    '/leads/summary',
+    asyncHandler(async (_req, res) => {
+      res.set('Cache-Control', 'no-store').json(await c.leadService.summary());
+    }),
+  );
+
   // Admin: one application with its repayment figures and full history.
   router.get(
     '/leads/:applicationId',

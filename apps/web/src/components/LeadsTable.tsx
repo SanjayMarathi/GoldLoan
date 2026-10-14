@@ -19,10 +19,18 @@ type Load =
  * Admin view: newest first, masked mobile (the server never sends the full number), filter by plan and status,
  * paging, quick status actions, and a details panel with everything about one application and its history.
  */
-export function LeadsTable({ version }: { version: number }) {
+interface LeadsTableProps {
+  version: number;
+  /** Status filter, shared with the summary cards above the table ('' = all) */
+  status: string;
+  onStatusChange: (status: string) => void;
+  /** Called after a status change or a manual refresh, so the totals above can update */
+  onChanged: () => void;
+}
+
+export function LeadsTable({ version, status, onStatusChange, onChanged }: LeadsTableProps) {
   const [plans, setPlans] = useState<LoanSchemeDto[]>([]);
   const [planId, setPlanId] = useState('');
-  const [status, setStatus] = useState('');
   const [page, setPage] = useState(1);
   const [load, setLoad] = useState<Load>({ status: 'loading' });
   const [reloadTick, setReloadTick] = useState(0);
@@ -30,6 +38,9 @@ export function LeadsTable({ version }: { version: number }) {
   const [rowError, setRowError] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [drawerVersion, setDrawerVersion] = useState(0);
+
+  // a new status filter (from the cards above) starts from the first page
+  useEffect(() => setPage(1), [status]);
 
   useEffect(() => {
     api.schemes().then((r) => setPlans(r.data)).catch(() => undefined);
@@ -52,9 +63,13 @@ export function LeadsTable({ version }: { version: number }) {
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const rows = load.status === 'ready' ? load.rows : load.status === 'loading' ? (load.rows ?? []) : [];
 
-  const replaceRow = useCallback((updated: LeadDto) => {
-    setLoad((l) => (l.status === 'ready' ? { ...l, rows: l.rows.map((r) => (r.applicationId === updated.applicationId ? updated : r)) } : l));
-  }, []);
+  const replaceRow = useCallback(
+    (updated: LeadDto) => {
+      setLoad((l) => (l.status === 'ready' ? { ...l, rows: l.rows.map((r) => (r.applicationId === updated.applicationId ? updated : r)) } : l));
+      onChanged();
+    },
+    [onChanged],
+  );
 
   const move = useCallback(
     async (lead: LeadDto, to: LeadStatus) => {
@@ -75,15 +90,22 @@ export function LeadsTable({ version }: { version: number }) {
   const closeDrawer = useCallback(() => setOpenId(null), []);
 
   return (
-    <section className="card wide">
+    <section className="card wide admin-table">
       <header className="card-head row">
         <div>
-          <span className="eyebrow">Admin</span>
-          <h1>Applications</h1>
-          <p className="muted">Newest first · mobile numbers are masked · demo admin view (no login)</p>
+          <h2 className="table-title">All applications</h2>
+          <p className="muted">Newest first</p>
         </div>
-        <button type="button" className="btn btn-ghost" onClick={() => setReloadTick((n) => n + 1)} aria-label="Refresh applications">
-          <Icon name="refresh" size={18} /> Refresh
+        <button
+          type="button"
+          className="btn btn-ghost btn-small"
+          onClick={() => {
+            setReloadTick((n) => n + 1);
+            onChanged();
+          }}
+          aria-label="Refresh applications"
+        >
+          <Icon name="refresh" size={16} /> Refresh
         </button>
       </header>
 
@@ -109,10 +131,7 @@ export function LeadsTable({ version }: { version: number }) {
           <span>Status</span>
           <select
             value={status}
-            onChange={(e) => {
-              setStatus(e.target.value);
-              setPage(1);
-            }}
+            onChange={(e) => onStatusChange(e.target.value)}
           >
             <option value="">All statuses</option>
             {LEAD_STATUSES.map((s) => (

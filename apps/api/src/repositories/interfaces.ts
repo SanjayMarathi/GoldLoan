@@ -59,6 +59,8 @@ export interface LeadRepository {
   /** Compare-and-set status change + audit entry. Returns null when the lead is not in `from`. */
   updateStatus(applicationId: string, from: LeadStatus, to: LeadStatus, actor: string, at: Date): Promise<Lead | null>;
   listAudit(applicationId: string): Promise<AuditEntry[]>;
+  /** Count and total loan per status, for the admin panel */
+  summary(): Promise<Array<{ status: LeadStatus; count: number; loanRupees: number }>>;
 }
 
 export interface LoanSchemeRepository {

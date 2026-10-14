@@ -151,6 +151,18 @@ describe('PostgreSQL repositories', { skip: URL ? false : 'set TEST_DATABASE_URL
     await assert.rejects(pool.query('UPDATE leads SET applied_ltv_bps = 9000 WHERE application_id = $1', [id]), /check constraint/i);
   });
 
+  it('summarises applications per status for the admin panel', async () => {
+    await reset();
+    await container.leadService.submit(VALID_LEAD, { channel: 'FORM' });
+    const second = await container.leadService.submit({ ...VALID_LEAD, mobileNumber: '9123456780', planId: 'PLAN_BULLET_01' }, { channel: 'FORM' });
+    if (second.statusCode === 201) await container.leadService.transition(second.body.applicationId, 'UNDER_REVIEW');
+    const s = await container.leadService.summary();
+    assert.equal(s.total, 2);
+    assert.deepEqual(s.byStatus.SUBMITTED, { count: 1, loanRupees: 216_562 });
+    assert.deepEqual(s.byStatus.UNDER_REVIEW, { count: 1, loanRupees: 202_125 });
+    assert.equal(s.totalLoanRupees, 418_687);
+  });
+
   it('the database itself refuses a loan plan above the 75% cap', async () => {
     await assert.rejects(
       pool.query("INSERT INTO loan_schemes (id, name, repayment_type, annual_interest_bps, max_ltv_bps, tenure_months) VALUES ('BAD', 'Bad', 'EMI', 1000, 9000, 12)"),

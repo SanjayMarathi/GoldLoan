@@ -100,6 +100,17 @@ export class MemoryLeadRepository implements LeadRepository {
     return updated;
   }
 
+  async summary(): Promise<Array<{ status: LeadStatus; count: number; loanRupees: number }>> {
+    const by = new Map<LeadStatus, { status: LeadStatus; count: number; loanRupees: number }>();
+    for (const l of this.leads) {
+      const row = by.get(l.status) ?? { status: l.status, count: 0, loanRupees: 0 };
+      row.count += 1;
+      row.loanRupees += l.eligibleLoanRupees;
+      by.set(l.status, row);
+    }
+    return [...by.values()];
+  }
+
   async listAudit(applicationId: string): Promise<AuditEntry[]> {
     return this.audit.filter((a) => a.applicationId === applicationId);
   }

@@ -33,25 +33,30 @@ npm run dev:pg       # starts PostgreSQL 16 in Docker, runs migrations + seed, s
 npm run test:pg      # every test, including the ones that run against real PostgreSQL
 ```
 
-To make plain `npm run dev` use PostgreSQL too: `npm run db:up` once, `cp .env.example .env`, and uncomment `DATABASE_URL`. `npm run db:migrate` / `npm run db:seed` exist if you want to run them by hand (both are idempotent). `npm run db:down` stops the container.
+To make plain `npm run dev` use PostgreSQL too: `npm run db:up` once, `cp .env.example .env`, and set `DATABASE_URL=postgresql://gold:gold@localhost:5432/goldloan`. `npm run db:migrate` / `npm run db:seed` exist if you want to run them by hand (both are idempotent). `npm run db:down` stops the container.
 
 ### With an AI model
 
-`cp .env.example .env` (if you don't have one yet), then set **one** of these in `.env` and restart:
+`cp .env.example .env` (if you don't have one yet). Three settings choose the AI; restart after changing them:
 
 ```bash
 # Google Gemini – free tier, the model this project was tested with (key: aistudio.google.com/apikey, no card)
-OPENAI_API_KEY=your-gemini-key
-OPENAI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
-OPENAI_MODEL=gemini-3.5-flash-lite
+LLM_API_KEY=your-gemini-key
+LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+LLM_MODEL=gemini-3.5-flash-lite
 
-# or Anthropic Claude – paid, billed per use at console.anthropic.com (separate from a Claude Pro subscription)
-ANTHROPIC_API_KEY=sk-ant-...
+# Anthropic Claude – paid, billed per use at console.anthropic.com (separate from a Claude Pro subscription)
+# LLM_BASE_URL=https://api.anthropic.com
+# LLM_MODEL=claude-opus-5-5
 ```
 
-The `OPENAI_*` names describe the **request format**, not the company: Google offers Gemini through an OpenAI-compatible address, so with the lines above every request goes to Google with your Gemini key, and OpenAI is never contacted. If both keys are set, Claude is used.
+The address decides how the app talks to the model:
+- `api.anthropic.com` uses the official Anthropic SDK.
+- Any other address uses the OpenAI-compatible request format, which Gemini, OpenAI, Groq and Ollama all accept.
+- A local Ollama (`http://localhost:11434/v1`) needs no key.
+- With no key, the built-in offline assistant answers.
 
-The sidebar footer, the chat header and the **About** page all show which assistant is running (for example `gemini-3.5-flash-lite`, `claude-opus-5-5`, or "offline assistant (no key)").
+The chat header shows "AI assistant" or "Offline assistant". The exact model is listed on the **About** page, in the reviewers' section.
 
 ### Everything in Docker
 
@@ -69,7 +74,18 @@ The API serves the built React app, so this is one app container plus the databa
 | `npm run dev:pg` or `docker compose up` on your machine | PostgreSQL in Docker, on the named volume `pgdata` | **Kept.** It survives restarts, rebuilds and `docker compose down`. Only `docker compose down -v` deletes the volume |
 | A hosting service (Render, Railway, Fly.io, a VM…) | A managed PostgreSQL (Neon, Supabase, Render Postgres, RDS…) set as `DATABASE_URL` | **Kept.** The database lives outside the app container |
 
-To deploy, build the `Dockerfile` on any host that runs Docker and set two secrets in the host's settings (never in the repo): `DATABASE_URL` (from the managed PostgreSQL, usually ending in `?sslmode=require`) and `ANTHROPIC_API_KEY`. On every start the app applies any new migrations and re-runs the seed. Both only add or update; neither ever deletes data, so redeploying keeps every application. Not yet tried against a managed PostgreSQL provider; tested with PostgreSQL 16 in Docker.
+**Hugging Face Spaces (step by step): [docs/DEPLOY_HUGGINGFACE.md](docs/DEPLOY_HUGGINGFACE.md).** Hugging Face doesn't host databases, so the Space connects to a free hosted PostgreSQL (Neon):
+
+```bash
+cp .env.hf.example .env.hf     # paste the Neon DATABASE_URL and your LLM_API_KEY
+npm run db:check:hf            # test the database connection from your computer first
+hf auth login                  # once, with a Hugging Face WRITE token
+npm run deploy:hf              # creates the Space, stores the secrets, uploads the committed code
+```
+
+Any other Docker host works the same way: build the `Dockerfile` and set `DATABASE_URL` and `LLM_API_KEY` as secrets in the host's settings, never in the repo. On every start the app applies any new migrations and re-runs the seed. Both only add or update, never delete, so redeploying keeps every application.
+
+The deploy script's packaging and the database check have been tested; a real Neon database and a real Space have not, because they need your accounts.
 
 ---
 
@@ -113,7 +129,7 @@ Confirm button ──POST /api/v1/chat/confirm──▶ LeadService.submit (the 
 
 - **Which API:** whichever model `.env` configures, always called from the server, so the browser never sees a key.
   - **Google Gemini** goes through Google's OpenAI-compatible endpoint. This is what was tested.
-  - **Claude** goes through the Anthropic Messages API with the official SDK. The default model is `claude-opus-5-5`, with adaptive thinking at low effort (`ANTHROPIC_EFFORT=low`).
+  - **Claude** goes through the Anthropic Messages API with the official SDK. The default model is `claude-opus-5-5`, with adaptive thinking at low effort (`LLM_EFFORT=low`).
 - **Thinking signatures:** both Gemini 3 and Claude attach signed "thinking" data to their tool calls. The adapters send it back unchanged with the conversation; without it, Gemini rejects every follow-up request.
 - **Without a key** (the default after cloning), the same tools and guards are driven by a deterministic, rule-based engine (`RuleBasedProvider`). It understands English and Hinglish, and it is what `npm test` and `npm run eval` use, so they need no network and no money. It is **not** an AI model. The UI says "offline assistant" when it is the one answering.
 - **If Claude is unreachable** (bad key, outage, timeout), that turn falls back to the offline assistant instead of showing an error.
@@ -129,7 +145,7 @@ The PDF asks for **one** single-page app with a three-step application flow **an
 | Area | Pages | Who |
 | --- | --- | --- |
 | Applicant | **Apply** (form), **Track** (look up your application by ID + mobile), **Loan Assist** chat | Borrowers and field agents |
-| Admin | **Admin** (all applications, filters, status actions, details drawer with full history) | Lender staff |
+| Admin | **Admin panel**, opened from the top-right corner: a separate full-width area (no applicant sidebar or chat) with totals per status, filters, status actions, and a details drawer with the full history | Lender staff |
 
 The admin view has **no login** in this demo (the brief doesn't ask for one). Mobile numbers are masked everywhere it shows them. Adding authentication is the first item under "What I would do with more time".
 
@@ -216,6 +232,7 @@ Beyond the brief, because the review and success screens should show what the ap
 | `POST /api/v1/quotes` | Quote for every plan. No database write |
 | `POST /api/v1/leads` | Create an application. `Idempotency-Key` header supported. 201 / 400 / 404 / 409 |
 | `GET /api/v1/leads` | Newest first, masked mobiles. `page`, `pageSize`, `planId`, `status` |
+| `GET /api/v1/leads/summary` | Admin panel totals: count and loan amount per status |
 | `GET /api/v1/leads/:applicationId` | One application in full: plan terms, EMI / interest, history (admin) |
 | `POST /api/v1/leads/lookup` | Applicant lookup with `{ applicationId, mobileNumber }`; both must match, and a wrong ID or a wrong mobile gets the same 404 |
 | `PATCH /api/v1/leads/:applicationId/status` | Status workflow (compare-and-set) |
@@ -244,26 +261,29 @@ Each application stores the plan terms it was filed with (migration `002`), so i
 
 ## Environment variables
 
-All are optional. See [.env.example](.env.example); invalid values stop startup with a clear message.
+[.env.example](.env.example) lists only the settings you are likely to change. All are optional, and invalid values stop startup with a clear message.
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `DATABASE_URL` | – | PostgreSQL connection string. Empty = in-memory. `npm run dev:pg` sets it for the Docker database |
+| `LLM_API_KEY` | – | Key for the AI model. Empty = built-in offline assistant |
+| `LLM_BASE_URL` | Gemini's OpenAI-compatible address | `https://api.anthropic.com` → Claude (official SDK); anything else → OpenAI-compatible (Gemini, OpenAI, Groq, Ollama) |
+| `LLM_MODEL` | `gemini-3.5-flash-lite` (`claude-opus-5-5` for Anthropic) | Model id |
+
+Advanced settings work too but are left out of `.env.example`, because the defaults are right for almost everyone:
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `PORT` | `4000` | API port |
 | `WEB_ORIGIN` | `http://localhost:5173` | Allowed CORS origin |
-| `DB_DRIVER` | `auto` | `auto` (PostgreSQL if `DATABASE_URL` is set, else memory) · `postgres` · `memory` |
-| `DATABASE_URL` | – | e.g. `postgresql://gold:gold@localhost:5432/goldloan` (`npm run dev:pg` sets it for you) |
+| `DB_DRIVER` | `auto` | `auto` (PostgreSQL if `DATABASE_URL` is set) · `postgres` · `memory` |
 | `MOCK_GOLD_RATE_24K_RUPEES` | `7000` | The mock 24K rate per gram |
-| `GOLD_RATE_CACHE_TTL_MS` | `60000` | Rate cache lifetime |
 | `RATE_LIMIT_WINDOW_MS` / `_LEADS_MAX` / `_CHAT_MAX` | `60000` / `20` / `40` | Per-IP limits (`_LEADS_MAX` also limits applicant lookups) |
-| `LLM_PROVIDER` | `auto` | `anthropic` · `openai` · `offline`. `auto` picks by which key is set |
-| `ANTHROPIC_API_KEY` | – | Turns on Claude. API keys are billed per use from prepaid credits at console.anthropic.com, separately from a Claude Pro / Max subscription |
-| `ANTHROPIC_MODEL` | `claude-opus-5-5` | Claude model id |
-| `ANTHROPIC_EFFORT` | `low` | `low` · `medium` · `high` · `xhigh` · `max`: how much the model thinks before answering |
-| `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL` | – / OpenAI / `gpt-4o-mini` | Any OpenAI-compatible API. For Gemini: your Gemini key, `https://generativelanguage.googleapis.com/v1beta/openai`, `gemini-3.5-flash-lite` |
-| `AGENT_MAX_TOOL_STEPS` | `6` | Tool-loop step limit per message |
-| `AGENT_SESSION_TTL_MS` | `1800000` | Chat session lifetime (30 min) |
+| `LLM_EFFORT` | `low` | Claude only: how much the model thinks before answering |
 | `LLM_TIMEOUT_MS` | `30000` | Per model call |
-| `FRAME_ANCESTORS` | – | Origins allowed to embed the app in an iframe (set automatically inside a Hugging Face Space) |
+| `LLM_PROVIDER` | `auto` | `offline` forces the built-in assistant even with a key |
+| `AGENT_MAX_TOOL_STEPS` / `AGENT_SESSION_TTL_MS` | `6` / `1800000` | Tool-loop limit per message; chat session lifetime |
+| `TRUST_PROXY`, `FRAME_ANCESTORS` | set automatically inside a Hugging Face Space | Real client IP behind the proxy; allow the huggingface.co iframe |
 
 ---
 
@@ -274,7 +294,7 @@ Run on Windows 11, Node 24, PostgreSQL 16 (Docker) on 14 Oct 2026:
 | Check | Result |
 | --- | --- |
 | `npm run typecheck` (shared, API, web) | clean |
-| `npm run test:pg`: every test, including the PostgreSQL ones | **160 passed, 0 failed, 0 skipped** (22 shared + 138 API) |
+| `npm run test:pg`: every test, including the PostgreSQL ones | **164 passed, 0 failed, 0 skipped** (22 shared + 142 API) |
 | `npm test` without a database | passes; the 10 PostgreSQL tests are skipped |
 | `npm run eval` (offline assistant) | **16/16** conversations, including the 5 required ones |
 | `npm run eval -- --live` on **Gemini 3.5 Flash-Lite** (free tier) | **5/5 judged conversations passed** (happy path, missing field, net > gross, typed "yes" is not a confirmation, double Confirm). The other 11 were **not judged**: the free-tier quota ran out mid-run (HTTP 429), so the offline fallback answered them. The runner now refuses to count those as passes |
@@ -289,7 +309,7 @@ Run on Windows 11, Node 24, PostgreSQL 16 (Docker) on 14 Oct 2026:
 
 - **A complete 16/16 live run on Gemini.** The free tier's quota ran out. Re-run `npm run eval -- --live` when it resets; it reports any conversation the fallback had to answer as "not judged".
 - **Live calls to Claude.** No Claude key was available. The adapter is covered by unit tests with a fake transport. A live run is about 100 model calls, roughly US$2–3 at Claude Opus 5.5 prices.
-- Hugging Face deployment.
+- A real Hugging Face Space and a real Neon database (the deploy script and the connection check are ready; they need your accounts).
 
 ---
 
@@ -327,6 +347,8 @@ docs/            project plan, agent design
 | `npm run build` | Production build of the web app |
 | `npm start` | API only; serves `apps/web/dist` if it has been built |
 | `npm run db:up` / `db:down` / `db:migrate` / `db:seed` | Database helpers |
+| `npm run db:check:hf` | Tests the hosted PostgreSQL in `.env.hf` from your computer |
+| `npm run deploy:hf` | Deploys to a Hugging Face Space ([guide](docs/DEPLOY_HUGGINGFACE.md)); `-- --dry-run` shows what it would do |
 
 ---
 

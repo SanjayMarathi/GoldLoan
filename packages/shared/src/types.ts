@@ -114,6 +114,13 @@ export interface CreateLeadResponse {
   lead: LeadDetailDto;
 }
 
+/** Admin panel totals: how many applications are in each status, and their loan amounts (whole rupees). */
+export interface LeadSummaryDto {
+  total: number;
+  totalLoanRupees: number;
+  byStatus: Record<LeadStatus, { count: number; loanRupees: number }>;
+}
+
 export interface LeadListResponse {
   data: LeadDto[];
   page: number;

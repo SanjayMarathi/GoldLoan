@@ -23,7 +23,9 @@
     "db:up": "docker compose up -d --wait db",
     "db:migrate": "npm run db:migrate -w apps/api",
     "db:seed": "npm run db:seed -w apps/api",
-    "db:down": "docker compose down"
+    "db:down": "docker compose down",
+    "db:check:hf": "node scripts/db-check.mjs",
+    "deploy:hf": "python scripts/deploy_hf.py"
   },
   "devDependencies": {
     "@types/node": "^22.9.0",

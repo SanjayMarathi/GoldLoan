@@ -19,6 +19,8 @@ const WEB_DIST = resolve(dirname(fileURLToPath(import.meta.url)), '../../../web/
 export function createApp(c: Container): Express {
   const app = express();
   app.disable('x-powered-by');
+  // Behind Hugging Face's proxy every request arrives from the proxy: take the client IP from X-Forwarded-For.
+  if (c.config.trustProxy) app.set('trust proxy', true);
 
   app.use(requestContext(c.logger));
   // Framing is refused unless an origin is allowed (Hugging Face Spaces shows the app in an iframe on huggingface.co).

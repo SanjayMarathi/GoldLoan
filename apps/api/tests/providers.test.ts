@@ -269,25 +269,38 @@ describe('postJson', () => {
   });
 });
 
-describe('provider factory', () => {
+describe('provider factory (LLM_API_KEY / LLM_BASE_URL / LLM_MODEL)', () => {
   it('uses the offline assistant when there is no key', () => {
     const set = createProviders(loadConfig({}).llm);
     assert.ok(set.primary instanceof RuleBasedProvider);
     assert.equal(set.fallback, undefined);
   });
 
-  it('prefers Anthropic when its key is set and falls back to offline', () => {
-    const set = createProviders(loadConfig({ ANTHROPIC_API_KEY: 'k' }).llm);
-    assert.equal(set.primary.name, 'anthropic:claude-opus-5-5');
+  it('defaults to Gemini through the OpenAI-compatible adapter, with the offline assistant as fallback', () => {
+    const set = createProviders(loadConfig({ LLM_API_KEY: 'k' }).llm);
+    assert.equal(set.primary.name, 'openai-compat:gemini-3.5-flash-lite');
     assert.ok(set.fallback instanceof RuleBasedProvider);
   });
 
-  it('supports any OpenAI-compatible endpoint (Gemini / Ollama)', () => {
-    const set = createProviders(loadConfig({ OPENAI_API_KEY: 'k', OPENAI_MODEL: 'gemini-2.0-flash' }).llm);
-    assert.equal(set.primary.name, 'openai-compat:gemini-2.0-flash');
+  it("uses the Claude SDK when the address is Anthropic's (and strips a /v1 the SDK adds itself)", () => {
+    const config = loadConfig({ LLM_API_KEY: 'k', LLM_BASE_URL: 'https://api.anthropic.com/v1' });
+    assert.equal(config.llm.baseUrl, 'https://api.anthropic.com');
+    assert.equal(createProviders(config.llm).primary.name, 'anthropic:claude-opus-5-5');
   });
 
-  it('refuses to start with a provider selected but no key', () => {
-    assert.throws(() => loadConfig({ LLM_PROVIDER: 'anthropic' }), /ANTHROPIC_API_KEY/);
+  it('a local server (Ollama) needs no key; a remote one without a key stays offline', () => {
+    const ollama = loadConfig({ LLM_BASE_URL: 'http://localhost:11434/v1', LLM_MODEL: 'llama3.1' });
+    assert.equal(createProviders(ollama.llm).primary.name, 'openai-compat:llama3.1');
+    assert.equal(loadConfig({ LLM_BASE_URL: 'https://api.openai.com/v1' }).llm.provider, 'offline');
+    assert.equal(loadConfig({ LLM_API_KEY: 'k', LLM_PROVIDER: 'offline' }).llm.provider, 'offline');
+  });
+
+  it('refuses to start with an LLM_BASE_URL that is not a URL', () => {
+    assert.throws(() => loadConfig({ LLM_BASE_URL: 'generativelanguage' }), /LLM_BASE_URL/);
+  });
+
+  it('trusts the proxy inside a Hugging Face Space only', () => {
+    assert.equal(loadConfig({}).trustProxy, false);
+    assert.equal(loadConfig({ SPACE_ID: 'me/space' }).trustProxy, true);
   });
 });

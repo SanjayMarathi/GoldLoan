@@ -1,6 +1,7 @@
 /**
  * npm run eval            – deterministic: offline assistant, no network, no API key, runs in ~1 s
  * npm run eval -- --live  – same conversations against the LLM configured in .env (tool checks relaxed)
+ * npm run eval -- --live --pause=20  – the same, waiting 20 s between conversations (free-tier rate limits)
  *
  * Exit code 1 if any scenario fails, so it can gate CI.
  */
@@ -17,6 +18,8 @@ import type { Scenario, Step } from './scenarios.ts';
 const live = process.argv.includes('--live');
 const verbose = process.argv.includes('--verbose') || process.argv.includes('-v');
 const only = process.argv.find((a) => a.startsWith('--only='))?.slice(7);
+/** --pause=20: wait 20 s between conversations, to stay inside a free tier's requests-per-minute limit */
+const pauseMs = Number(process.argv.find((a) => a.startsWith('--pause='))?.slice(8) ?? 0) * 1000;
 
 const C = { green: '\x1b[32m', red: '\x1b[31m', dim: '\x1b[2m', bold: '\x1b[1m', yellow: '\x1b[33m', reset: '\x1b[0m' };
 
@@ -113,7 +116,8 @@ async function main(): Promise<void> {
 
   let passed = 0;
   let notJudged = 0;
-  for (const s of scenarios) {
+  for (const [index, s] of scenarios.entries()) {
+    if (index > 0 && pauseMs > 0) await new Promise((r) => setTimeout(r, pauseMs));
     const { ok, fellBack, log } = await runScenario(s);
     // Live mode measures the LLM: a conversation the offline fallback had to answer proves nothing either way.
     const unjudged = live && fellBack > 0;

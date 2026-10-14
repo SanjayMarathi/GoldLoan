@@ -3,7 +3,7 @@ import { About } from './components/About.tsx';
 import { ApplyPage } from './components/ApplyPage.tsx';
 import { ChatPanel } from './components/ChatPanel.tsx';
 import { Icon } from './components/Icon.tsx';
-import { LeadsTable } from './components/LeadsTable.tsx';
+import { AdminPage } from './components/AdminPage.tsx';
 import { Sidebar } from './components/Sidebar.tsx';
 import { TopNav } from './components/TopNav.tsx';
 import type { Route } from './components/TopNav.tsx';
@@ -76,42 +76,47 @@ export default function App() {
     [go],
   );
 
+  // The admin panel is its own area: no applicant sidebar, no chat, full width.
+  const admin = route === 'admin';
+
   return (
-    <div className={`app route-${route}`}>
+    <div className={`app route-${route}${admin ? ' admin-mode' : ''}`}>
       <div className="bg" aria-hidden="true" />
       <a className="skip-link" href="#main">
         Skip to content
       </a>
 
-      <Sidebar
-        open={menuOpen}
-        health={health}
-        history={history.entries}
-        onClose={() => setMenuOpen(false)}
-        onNew={newApplication}
-        onOpenHistory={track}
-        onClearHistory={history.clear}
-      />
-      {menuOpen && <div className="scrim" onClick={() => setMenuOpen(false)} aria-hidden="true" />}
+      {!admin && (
+        <Sidebar
+          open={menuOpen}
+          health={health}
+          history={history.entries}
+          onClose={() => setMenuOpen(false)}
+          onNew={newApplication}
+          onOpenHistory={track}
+          onClearHistory={history.clear}
+        />
+      )}
+      {!admin && menuOpen && <div className="scrim" onClick={() => setMenuOpen(false)} aria-hidden="true" />}
 
       <div className="main">
         <TopNav route={route} theme={theme} onNavigate={(r) => go(r)} onSetTheme={setTheme} onOpenMenu={() => setMenuOpen(true)} />
         <main id="main" className="stage" tabIndex={-1}>
           {route === 'apply' && <ApplyPage key={applyKey} onFiled={onFiled} onTrack={track} onRestart={newApplication} />}
           {route === 'track' && <TrackPage initialId={param} />}
-          {route === 'admin' && <LeadsTable version={version} />}
+          {route === 'admin' && <AdminPage version={version} />}
           {route === 'about' && <About assistant={health.info?.assistant} storage={health.info?.storage} />}
         </main>
         <footer className="legal">Indicative estimates · final amount decided after physical appraisal · not a promise of approval</footer>
       </div>
 
-      {!chatOpen && (
+      {!admin && !chatOpen && (
         <button type="button" className="chat-launcher" onClick={() => setChatOpen(true)} aria-label="Open Loan Assist chat">
           <Icon name="chat" size={22} />
           <span>Ask Loan Assist</span>
         </button>
       )}
-      <ChatPanel open={chatOpen} onClose={closeChat} onFiled={onFiled} />
+      {!admin && <ChatPanel open={chatOpen} onClose={closeChat} onFiled={onFiled} />}
     </div>
   );
 }

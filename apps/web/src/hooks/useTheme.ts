@@ -3,7 +3,7 @@ import { readString, writeString } from '../lib/storage.ts';
 
 export type Theme = 'light' | 'dark';
 
-const THEME_COLOR: Record<Theme, string> = { light: '#faf8f3', dark: '#0c0b09' };
+const THEME_COLOR: Record<Theme, string> = { light: '#faf8f3', dark: '#09090b' };
 
 // Light (gold & white) is the default; dark (gold & black) only when the user picks it.
 function initialTheme(): Theme {

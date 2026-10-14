@@ -21,10 +21,11 @@ export function createProviders(llm: AppConfig['llm'], fetchImpl?: FetchLike): P
     case 'anthropic':
       return {
         primary: new AnthropicProvider({
-          apiKey: llm.anthropicApiKey!,
-          model: llm.anthropicModel,
-          effort: llm.anthropicEffort,
+          apiKey: llm.apiKey!,
+          model: llm.model,
+          effort: llm.effort,
           timeoutMs: llm.timeoutMs,
+          baseUrl: llm.baseUrl,
           ...shared,
         }),
         fallback: offline,
@@ -32,9 +33,9 @@ export function createProviders(llm: AppConfig['llm'], fetchImpl?: FetchLike): P
     case 'openai':
       return {
         primary: new OpenAICompatProvider({
-          apiKey: llm.openaiApiKey,
-          baseUrl: llm.openaiBaseUrl,
-          model: llm.openaiModel,
+          apiKey: llm.apiKey,
+          baseUrl: llm.baseUrl,
+          model: llm.model,
           timeoutMs: llm.timeoutMs,
           ...shared,
         }),

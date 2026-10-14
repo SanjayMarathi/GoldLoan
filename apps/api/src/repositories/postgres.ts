@@ -243,6 +243,13 @@ export class PostgresLeadRepository implements LeadRepository {
     }
   }
 
+  async summary(): Promise<Array<{ status: LeadStatus; count: number; loanRupees: number }>> {
+    const { rows } = await this.pool.query(
+      'SELECT status, count(*)::int AS count, coalesce(sum(loan_amount_rupees), 0)::bigint AS loan FROM leads GROUP BY status',
+    );
+    return rows.map((r) => ({ status: r.status as LeadStatus, count: Number(r.count), loanRupees: Number(r.loan) }));
+  }
+
   async listAudit(applicationId: string): Promise<AuditEntry[]> {
     const { rows } = await this.pool.query('SELECT * FROM lead_audit WHERE application_id = $1 ORDER BY id', [applicationId]);
     return rows.map((r) => ({
@@ -284,5 +291,5 @@ export class PostgresRepositories implements Repositories {
 }
 
 export function createPool(connectionString: string): Pool {
-  return new pg.Pool({ connectionString, max: 10, idleTimeoutMillis: 30_000, connectionTimeoutMillis: 5_000 });
+  return new pg.Pool({ connectionString, max: 10, idleTimeoutMillis: 30_000, connectionTimeoutMillis: 10_000 });
 }

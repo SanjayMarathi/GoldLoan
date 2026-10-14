@@ -9,6 +9,7 @@ import type {
   LeadDetailDto,
   LeadDto,
   LeadListResponse,
+  LeadSummaryDto,
   LoanSchemeDto,
   QuoteResponse,
 } from '@gold/shared/types';
@@ -89,6 +90,8 @@ export const api = {
   updateStatus: (applicationId: string, status: LeadStatus) =>
     request<LeadDto>(`/leads/${encodeURIComponent(applicationId)}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   audit: (applicationId: string) => request<{ data: AuditEntryDto[] }>(`/leads/${encodeURIComponent(applicationId)}/audit`),
+  /** Admin panel totals per status */
+  summary: (signal?: AbortSignal) => request<LeadSummaryDto>('/leads/summary', signal ? { signal } : {}),
   /** Admin: one application with repayment figures and full history */
   lead: (applicationId: string, signal?: AbortSignal) =>
     request<LeadDetailDto>(`/leads/${encodeURIComponent(applicationId)}`, signal ? { signal } : {}),

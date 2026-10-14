@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto';
-import { DUPLICATE_WINDOW_MS } from '@gold/shared/constants';
+import { DUPLICATE_WINDOW_MS, LEAD_STATUSES } from '@gold/shared/constants';
 import type { LeadStatus } from '@gold/shared/constants';
 import { gramsToMg } from '@gold/shared/units';
 import type { CreateLeadInput, LeadLookupInput, ListLeadsQuery } from '@gold/shared/schemas';
-import type { AuditEntryDto, CreateLeadResponse, ErrorBody, LeadDetailDto, LeadDto, LeadListResponse } from '@gold/shared/types';
+import type { AuditEntryDto, CreateLeadResponse, ErrorBody, LeadDetailDto, LeadDto, LeadListResponse, LeadSummaryDto } from '@gold/shared/types';
 import type { Lead } from '../domain/Lead.ts';
 import {
   DuplicateApplicationError,
@@ -186,6 +186,18 @@ export class LeadService {
     const updated = await this.leads.updateStatus(applicationId, lead.status, to, actor, this.clock.now());
     if (!updated) throw new InvalidStatusTransitionError(lead.status, to); // lost a race with another admin
     return this.toApiDto(updated);
+  }
+
+  /** Admin panel totals per status. */
+  async summary(): Promise<LeadSummaryDto> {
+    const byStatus = Object.fromEntries(LEAD_STATUSES.map((s) => [s, { count: 0, loanRupees: 0 }])) as LeadSummaryDto['byStatus'];
+    for (const row of await this.leads.summary()) byStatus[row.status] = { count: row.count, loanRupees: row.loanRupees };
+    const all = Object.values(byStatus);
+    return {
+      total: all.reduce((n, s) => n + s.count, 0),
+      totalLoanRupees: all.reduce((n, s) => n + s.loanRupees, 0),
+      byStatus,
+    };
   }
 
   getAudit(applicationId: string): Promise<AuditEntry[]> {

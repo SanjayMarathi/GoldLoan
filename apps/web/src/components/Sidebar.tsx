@@ -15,11 +15,6 @@ interface SidebarProps {
   onClearHistory: () => void;
 }
 
-/** "anthropic:claude-opus-5-5" → "claude-opus-5-5", "openai-compat:gemini-3.5-flash-lite" → "gemini-3.5-flash-lite" */
-function assistantName(provider: string): string {
-  return provider.startsWith('offline') ? 'offline assistant (no key)' : (provider.split(':')[1] ?? provider);
-}
-
 export function Sidebar({ open, health, history, onClose, onNew, onOpenHistory, onClearHistory }: SidebarProps) {
   const [rate, setRate] = useState<string | null>(null);
 
@@ -86,13 +81,7 @@ export function Sidebar({ open, health, history, onClose, onNew, onOpenHistory, 
           <span className="dot" aria-hidden="true" />
           {health.online ? 'Connected' : 'Offline – retrying'}
         </div>
-        <small>
-          {rate ? `24K gold ${rate}/g (mock)` : 'Gold rate unavailable'}
-          {health.info ? ` · ${health.info.storage === 'postgres' ? 'PostgreSQL' : 'in-memory data'}` : ''}
-        </small>
-        <small>
-          {health.info ? `AI: ${assistantName(health.info.assistant)}` : ''}
-        </small>
+        <small>{rate ? `Today's 24K gold rate: ${rate}/g` : 'Gold rate unavailable'}</small>
       </div>
     </aside>
   );
