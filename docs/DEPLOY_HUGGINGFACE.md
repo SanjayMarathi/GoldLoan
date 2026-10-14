@@ -101,4 +101,4 @@ Commit your changes and run `npm run deploy:hf` again. Hugging Face rebuilds the
 - the deploy script's packaging and its login check;
 - a real Neon database (PostgreSQL 18.6, Singapore): `npm run db:check:hf` connects with `sslmode=verify-full`, and the app's first start applied both migrations and served the seeded plans and correct quotes from it.
 
-**Not yet tested:** a real Space. That needs a Hugging Face login.
+- the real Space: https://sanjaymarathi-gold-loan-portal.hf.space was deployed with `npm run deploy:hf`. It built and started in about 30 seconds, and health, plans, quotes, validation, the Gemini chat and the huggingface.co iframe were all checked live.

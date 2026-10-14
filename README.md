@@ -2,6 +2,8 @@
 
 A full-stack gold-loan intake portal built for the TGlobal Full-Stack Developer take-home assignment.
 
+**Live demo:** https://sanjaymarathi-gold-loan-portal.hf.space (Hugging Face Space · PostgreSQL on Neon · Gemini). The admin panel is open in this demo (no login).
+
 - **Apply** on one scrollable page: your gold → live quote for both plans → review every figure → submit.
 - **Track** an application again at any time with its ID and your mobile number.
 - **Admin** sees every application, moves it through the status workflow, and opens any application in full with its history.
@@ -85,7 +87,7 @@ npm run deploy:hf              # creates the Space, stores the secrets, uploads 
 
 Any other Docker host works the same way: build the `Dockerfile` and set `DATABASE_URL` and `LLM_API_KEY` as secrets in the host's settings, never in the repo. On every start the app applies any new migrations and re-runs the seed. Both only add or update, never delete, so redeploying keeps every application.
 
-Tested so far: the deploy script's packaging, and a real Neon database (connection, migrations, seeded plans, quotes). A real Space still needs a Hugging Face login.
+This has been done for real: the live demo above runs from `npm run deploy:hf`, on a Neon database (PostgreSQL 18.6).
 
 ---
 
@@ -303,13 +305,14 @@ Run on Windows 11, Node 24, PostgreSQL 16 (Docker) on 14 Oct 2026:
 | `docker compose up --build` | app + PostgreSQL healthy, application created with the PDF figures, web page served |
 | Browser (headless Chrome, 1440 px and 375 px, light and dark) on PostgreSQL | apply → submit → success with EMI → track → admin approve / reject → history still visible → duplicate shows the friendly 409; chat → summary card with EMI → Confirm files the application |
 | Production build in the browser | no console errors, no blocked scripts, fonts and images load |
+| Live Hugging Face Space (`npm run deploy:hf`) | built and running in about 30 s. Checked on the live site: health reports PostgreSQL (Neon) and Gemini; plans come from Neon; the 45 g 22K quote matches the PDF; net > gross returns 400; the chat is answered by Gemini and asks for the gross weight; the app renders inside the huggingface.co page with no console errors |
 | GitHub Actions (runs on every push) | passing: typecheck, all tests with a PostgreSQL service, 16/16 offline evals, build |
 
 **Not yet tested:**
 
 - **Hinglish quotes on Gemini Flash-Lite** (the known failure above). A stronger model may follow the rule; untested.
 - **Live calls to Claude.** No Claude key was available. The adapter is covered by unit tests with a fake transport. A live run is about 100 model calls, roughly US$2–3 at Claude Opus 5.5 prices.
-- **A real Hugging Face Space.** The deploy script is ready and dry-run tested; it needs a Hugging Face login. The **Neon database is tested**: `npm run db:check:hf` connects with strict SSL (PostgreSQL 18.6), and the app's first start applied both migrations there and served the seeded plans and correct quotes.
+- **Filing applications on the live Space** was deliberately not tested, so that no test data lands in the real database. The same code path is covered by the tests and the local PostgreSQL runs.
 
 ---
 
