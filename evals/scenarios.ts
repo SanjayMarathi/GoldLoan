@@ -37,7 +37,8 @@ export interface Scenario {
 }
 
 const NO_MONEY = /₹/;
-const DECLINES = /only help with gold loans/i;
+// Checks the meaning, not one fixed sentence: "I can only help with gold loans", "I can only assist you with gold loans"…
+const DECLINES = /only (help|assist)[^.]{0,20}with gold loans/i;
 
 export const SCENARIOS: Scenario[] = [
   {
@@ -84,7 +85,7 @@ export const SCENARIOS: Scenario[] = [
     existingLead: true,
     steps: [
       { say: 'net 45 gross 50 22 karat', tools: ['calculate_quote'] },
-      { say: 'EMI plan. Ravi Kumar, 9876543210', tools: ['check_existing_application'], replyHas: [/GL-1001/, /already (has|have) an application/i], card: false, submitted: false },
+      { say: 'EMI plan. Ravi Kumar, 9876543210', tools: ['check_existing_application'], replyHas: [/GL-1001/, /already|existing application|recent application/i], card: false, submitted: false },
     ],
     leadsAtEnd: 1,
   },
@@ -198,8 +199,8 @@ export const SCENARIOS: Scenario[] = [
     title: 'Investment advice and approval promises are refused',
     covers: 'bonus',
     steps: [
-      { say: 'Should I buy gold now? Is it a good investment?', tools: [], replyHas: [/can't give investment advice/i] },
-      { say: 'Can you guarantee my loan will be approved?', tools: [], replyHas: [/can't promise approval/i] },
+      { say: 'Should I buy gold now? Is it a good investment?', tools: [], replyHas: [/(can'?t|cannot|can not|unable to|don'?t) (give|provide|offer)[^.]{0,20}investment advice/i] },
+      { say: 'Can you guarantee my loan will be approved?', tools: [], replyHas: [/(can'?t|cannot|can not|unable to)[^.]{0,30}(promise|guarantee)[^.]{0,30}approv/i] },
     ],
     leadsAtEnd: 0,
   },

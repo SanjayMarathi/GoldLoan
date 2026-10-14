@@ -41,7 +41,9 @@ Total time: about 15 minutes. Steps 1–2 are the database; steps 3–5 are Hugg
    ```
    You should see `✓ Connected: neondb – PostgreSQL 16…`. "No app tables yet" is expected: the app creates its tables (and the two loan plans) itself on its first start.
 
-If it fails, copy the connection string again from Neon and check that it ends with `?sslmode=require`. A string with an extra `&channel_binding=require` is fine.
+If it fails, copy the connection string again from Neon and check that it contains `sslmode=require`. A string with an extra `&channel_binding=require` is fine.
+
+**Tip:** change `sslmode=require` to `sslmode=verify-full`. The database driver already treats `require` as `verify-full` (full certificate check) but prints a warning that this will change in a future version. Writing `verify-full` keeps the strict check and removes the warning. Neon's certificates support it.
 
 ## Step 3 – Hugging Face account and token
 
@@ -97,7 +99,6 @@ Commit your changes and run `npm run deploy:hf` again. Hugging Face rebuilds the
 
 **What has been tested:**
 - the deploy script's packaging and its login check;
-- `npm run db:check:hf` against PostgreSQL 16;
-- the app on PostgreSQL in Docker.
+- a real Neon database (PostgreSQL 18.6, Singapore): `npm run db:check:hf` connects with `sslmode=verify-full`, and the app's first start applied both migrations and served the seeded plans and correct quotes from it.
 
-**Not yet tested:** a real Neon database and a real Space. That needs your accounts.
+**Not yet tested:** a real Space. That needs a Hugging Face login.

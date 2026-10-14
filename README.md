@@ -85,7 +85,7 @@ npm run deploy:hf              # creates the Space, stores the secrets, uploads 
 
 Any other Docker host works the same way: build the `Dockerfile` and set `DATABASE_URL` and `LLM_API_KEY` as secrets in the host's settings, never in the repo. On every start the app applies any new migrations and re-runs the seed. Both only add or update, never delete, so redeploying keeps every application.
 
-The deploy script's packaging and the database check have been tested; a real Neon database and a real Space have not, because they need your accounts.
+Tested so far: the deploy script's packaging, and a real Neon database (connection, migrations, seeded plans, quotes). A real Space still needs a Hugging Face login.
 
 ---
 
@@ -297,7 +297,7 @@ Run on Windows 11, Node 24, PostgreSQL 16 (Docker) on 14 Oct 2026:
 | `npm run test:pg`: every test, including the PostgreSQL ones | **164 passed, 0 failed, 0 skipped** (22 shared + 142 API) |
 | `npm test` without a database | passes; the 10 PostgreSQL tests are skipped |
 | `npm run eval` (offline assistant) | **16/16** conversations, including the 5 required ones |
-| `npm run eval -- --live` on **Gemini 3.5 Flash-Lite** (free tier) | **5/5 judged conversations passed** (happy path, missing field, net > gross, typed "yes" is not a confirmation, double Confirm). The other 11 were **not judged**: the free-tier quota ran out mid-run (HTTP 429), so the offline fallback answered them. The runner now refuses to count those as passes |
+| `npm run eval -- --live --pause=25` on **Gemini 3.5 Flash-Lite** (free tier) | **Full run: 12/16**, with every turn answered by Gemini (0 fallback turns). Three of the four failures were wording checks written for the offline engine's exact sentences (for example "can't" where Gemini wrote "cannot"). After changing them to check the meaning, those three were re-run live and **passed**. The fourth is a **real failure**: in a Hinglish conversation Gemini gets the numbers right but switches to English for the quote, even with an explicit prompt rule. The other 12 conversations were not re-run after the last two prompt rules were added |
 | Live chat on Gemini through the app | The PDF's example "I have 45 grams of 22 carat jewellery, how much can I get?" → Gemini asks for the gross weight instead of assuming it. A full chat ended with GL-1044 filed after Confirm, with every figure matching the PDF |
 | Clean copy (no `node_modules`, no `.env`): `npm install` → `npm test` → `npm run build` → start | all worked first time; test case 3 returned exactly 7.5 g / ₹52,500 / ₹39,375 |
 | `docker compose up --build` | app + PostgreSQL healthy, application created with the PDF figures, web page served |
@@ -307,9 +307,9 @@ Run on Windows 11, Node 24, PostgreSQL 16 (Docker) on 14 Oct 2026:
 
 **Not yet tested:**
 
-- **A complete 16/16 live run on Gemini.** The free tier's quota ran out. Re-run `npm run eval -- --live` when it resets; it reports any conversation the fallback had to answer as "not judged".
+- **Hinglish quotes on Gemini Flash-Lite** (the known failure above). A stronger model may follow the rule; untested.
 - **Live calls to Claude.** No Claude key was available. The adapter is covered by unit tests with a fake transport. A live run is about 100 model calls, roughly US$2–3 at Claude Opus 5.5 prices.
-- A real Hugging Face Space and a real Neon database (the deploy script and the connection check are ready; they need your accounts).
+- **A real Hugging Face Space.** The deploy script is ready and dry-run tested; it needs a Hugging Face login. The **Neon database is tested**: `npm run db:check:hf` connects with strict SSL (PostgreSQL 18.6), and the app's first start applied both migrations there and served the seeded plans and correct quotes.
 
 ---
 

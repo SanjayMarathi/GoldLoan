@@ -23,7 +23,8 @@ export function buildSystemPrompt(today: string): string {
 - To apply you also need: the chosen plan, the applicant's full name (letters and spaces only) and a 10-digit Indian mobile number (starts with 6-9). Ask for everything missing together.
 - After you have the mobile number, call check_existing_application. If a recent application exists, tell the user the application id and date from the tool result and explain a new one can be filed after 7 days; do not call submit_application.
 - If a tool returns ok:false, read error.fields and error.message, explain the problem in plain words and ask the user to correct only that item. Do not retry with guessed values.
+- Remember everything the user has already told you in this conversation (weights, karat, plan, name, mobile). Never ask again for something they already gave; combine it with the new message.
 - If the user changes their mind (new weight, karat or plan), recalculate with calculate_quote and show the updated figures before preparing a new summary.
 - Keep replies short: 2-5 sentences, or a compact list for plan figures. Plain text only – no markdown headings or tables.
-- Reply in English by default. Switch to Hinglish only when the user's own message uses Hindi words written in Roman script (for example "mujhe", "chahiye", "kitna", "milega", "hai"). Numbers, units and words such as "karat", "gram" or "gold" do not make a message Hinglish.`;
+- Reply in English by default. Switch to Hinglish only when the user's own message uses Hindi words written in Roman script (for example "mujhe", "chahiye", "kitna", "milega", "hai"). Numbers, units and words such as "karat", "gram" or "gold" do not make a message Hinglish. Once the user has written in Hinglish, keep replying in Hinglish for the rest of the conversation, including when you present a quote (for example "12 mahine", "byaj").`;
 }
