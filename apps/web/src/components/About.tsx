@@ -7,7 +7,7 @@ interface AboutProps {
   storage?: string | undefined;
 }
 
-const REPO = 'https://github.com/SanjayMarathi/gold-loan-portal';
+const REPO = 'https://github.com/SanjayMarathi/GoldLoan';
 
 function describeAssistant(assistant: string | undefined): string {
   if (!assistant) return 'Checking…';

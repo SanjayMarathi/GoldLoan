@@ -1,8 +1,8 @@
-# Gold Loan Portal, with an AI Agent
+# GoldLoan – gold loan portal with an AI agent
 
 A full-stack gold-loan intake portal built for the TGlobal Full-Stack Developer take-home assignment.
 
-**Live demo:** https://sanjaymarathi-gold-loan-portal.hf.space (Hugging Face Space · PostgreSQL on Neon · Gemini). The admin panel is open in this demo (no login).
+**Live demo:** https://sanjaymarathi-goldloan.hf.space (Hugging Face Space · PostgreSQL on Neon · Gemini). The admin panel is open in this demo (no login).
 
 - **Apply** on one scrollable page: your gold → live quote for both plans → review every figure → submit.
 - **Track** an application again at any time with its ID and your mobile number.

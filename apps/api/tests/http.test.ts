@@ -268,7 +268,7 @@ describe('Chat API', () => {
 describe('security headers', () => {
   it('refuses framing by default, and allows only Hugging Face inside a Space', async () => {
     const local = await start();
-    const space = await start({ SPACE_ID: 'someone/gold-loan-portal' });
+    const space = await start({ SPACE_ID: 'someone/GoldLoan' });
     try {
       const a = await call(local, 'GET', '/health');
       assert.equal(a.headers.get('x-frame-options'), 'SAMEORIGIN');

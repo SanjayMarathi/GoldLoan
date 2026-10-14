@@ -18,7 +18,7 @@ Total time: about 15 minutes. Steps 1–2 are the database; steps 3–5 are Hugg
 
 1. Go to **https://neon.tech** and sign up (GitHub or Google login is fine).
 2. **Create a project:**
-   - name `gold-loan-portal`;
+   - name `goldloan`;
    - PostgreSQL version 16 or newer;
    - the region closest to your users, for example *AWS Asia Pacific (Singapore)* for India.
 3. On the project dashboard click **Connect** and copy the **connection string**. It looks like:
@@ -63,7 +63,7 @@ npm run deploy:hf                 # Mac/Linux: python3 scripts/deploy_hf.py
 ```
 
 The script:
-1. creates the Space `<your-username>/gold-loan-portal` (Docker) if it doesn't exist;
+1. creates the Space `<your-username>/GoldLoan` (Docker) if it doesn't exist;
 2. stores `DATABASE_URL` and `LLM_API_KEY` as **encrypted Space secrets**, and `LLM_BASE_URL` / `LLM_MODEL` as variables;
 3. uploads the committed code (never a `.env` file), with the header Hugging Face needs (`sdk: docker`, `app_port: 4000`).
 
@@ -71,13 +71,13 @@ Run `npm run deploy:hf -- --dry-run` first to see what would happen without uplo
 
 ## Step 5 – Check it
 
-1. Open `https://huggingface.co/spaces/<your-username>/gold-loan-portal`. The **Logs** tab shows the build (about 3–5 minutes the first time) and then:
+1. Open `https://huggingface.co/spaces/<your-username>/GoldLoan`. The **Logs** tab shows the build (about 3–5 minutes the first time) and then:
    ```
    applied 001_init.sql
    applied 002_lead_plan_terms.sql
-   Gold Loan Portal API listening on http://localhost:4000
+   GoldLoan API listening on http://localhost:4000
    ```
-2. Open `https://<your-username>-gold-loan-portal.hf.space/api/v1/health`. It should say `"storage":"postgres"`.
+2. Open `https://<your-username>-goldloan.hf.space/api/v1/health`. It should say `"storage":"postgres"`.
 3. File an application, then look in Neon's **Tables** view: the row is in `leads`.
 
 To change a secret later, use the Space's **Settings → Variables and secrets** page, or edit `.env.hf` and run `npm run deploy:hf` again.
@@ -101,4 +101,4 @@ Commit your changes and run `npm run deploy:hf` again. Hugging Face rebuilds the
 - the deploy script's packaging and its login check;
 - a real Neon database (PostgreSQL 18.6, Singapore): `npm run db:check:hf` connects with `sslmode=verify-full`, and the app's first start applied both migrations and served the seeded plans and correct quotes from it.
 
-- the real Space: https://sanjaymarathi-gold-loan-portal.hf.space was deployed with `npm run deploy:hf`. It built and started in about 30 seconds, and health, plans, quotes, validation, the Gemini chat and the huggingface.co iframe were all checked live.
+- the real Space: https://sanjaymarathi-goldloan.hf.space was deployed with `npm run deploy:hf`. It built and started in about 30 seconds, and health, plans, quotes, validation, the Gemini chat and the huggingface.co iframe were all checked live.

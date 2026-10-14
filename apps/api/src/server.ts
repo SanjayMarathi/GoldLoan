@@ -17,7 +17,7 @@ async function main(): Promise<void> {
   const server = app.listen(config.port, () => {
     logger.info(
       { port: config.port, storage: repositories.kind, assistant: container.agent.providerName },
-      `Gold Loan Portal API listening on http://localhost:${config.port}`,
+      `GoldLoan API listening on http://localhost:${config.port}`,
     );
   });
   server.keepAliveTimeout = 65_000; // longer than typical proxy idle timeouts

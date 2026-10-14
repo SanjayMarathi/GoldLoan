@@ -1,9 +1,9 @@
 {
-  "name": "gold-loan-portal",
+  "name": "goldloan",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Gold Loan Portal with an AI Loan Assist agent (TGlobal take-home assignment)",
+  "description": "GoldLoan – gold loan portal with an AI Loan Assist agent (TGlobal take-home assignment)",
   "engines": {
     "node": ">=22"
   },

@@ -2,14 +2,14 @@
 
 What it does
   1. Reads the Space's settings from .env.hf (git-ignored): DATABASE_URL, LLM_API_KEY, LLM_BASE_URL, LLM_MODEL.
-  2. Creates the Space <your-username>/gold-loan-portal (Docker) if it does not exist yet.
+  2. Creates the Space <your-username>/GoldLoan (Docker) if it does not exist yet.
   3. Stores DATABASE_URL and LLM_API_KEY as encrypted Space *secrets*, LLM_BASE_URL / LLM_MODEL as variables.
   4. Uploads the committed code only (git archive HEAD – never a .env file), with a README header that tells
      Hugging Face to build the Dockerfile and serve port 4000.
 Hugging Face then builds the image and starts the app; on first start the app creates its tables in your database.
 
 Needs: pip install huggingface_hub  and  hf auth login  (a token with WRITE access).
-Options: --space NAME (default gold-loan-portal) · --private · --dry-run (prepare and show, upload nothing)
+Options: --space NAME (default GoldLoan) · --private · --dry-run (prepare and show, upload nothing)
 """
 import argparse
 import io
@@ -24,7 +24,7 @@ SECRETS = ("DATABASE_URL", "LLM_API_KEY")
 VARIABLES = ("LLM_BASE_URL", "LLM_MODEL")
 
 SPACE_HEADER = """---
-title: Gold Loan Portal
+title: GoldLoan
 emoji: 🪙
 colorFrom: yellow
 colorTo: gray
@@ -54,7 +54,7 @@ def git(*args: str) -> bytes:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Deploy to a Hugging Face Docker Space")
-    parser.add_argument("--space", default="gold-loan-portal", help="Space name (default: gold-loan-portal)")
+    parser.add_argument("--space", default="GoldLoan", help="Space name (default: GoldLoan)")
     parser.add_argument("--private", action="store_true", help="create the Space as private")
     parser.add_argument("--dry-run", action="store_true", help="prepare everything and show it, upload nothing")
     args = parser.parse_args()
@@ -72,7 +72,7 @@ def main() -> int:
         print("! You have uncommitted changes. Only committed code is deployed – commit first if you want them live.")
 
     # 1. the code: exactly what is committed, plus the Space header on the README
-    staging = Path(tempfile.mkdtemp(prefix="gold-loan-hf-"))
+    staging = Path(tempfile.mkdtemp(prefix="goldloan-hf-"))
     with tarfile.open(fileobj=io.BytesIO(git("archive", "--format=tar", "HEAD"))) as tar:
         tar.extractall(staging, filter="data")
     readme = staging / "README.md"

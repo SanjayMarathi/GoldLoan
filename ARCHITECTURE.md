@@ -1,6 +1,6 @@
 # Architecture
 
-This document explains how the Gold Loan Portal is put together and why. The short version: **one set of business rules, reached through two front doors** (the web form and the AI agent), with money maths that cannot drift.
+This document explains how GoldLoan is put together and why. The short version: **one set of business rules, reached through two front doors** (the web form and the AI agent), with money maths that cannot drift.
 
 ## 1. System context
 
